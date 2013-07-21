@@ -19,6 +19,7 @@ import com.google.gwt.user.client.Random;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
+import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.DialogBox;
 import com.google.gwt.user.client.ui.FlexTable;
@@ -44,8 +45,44 @@ private Button addStockButton = new Button("Add");
 private Label lastUpdatedLabel = new Label();
 private ArrayList<String> stocks = new ArrayList<String>();
 
+private LoginInfo loginInfo = null;
+private VerticalPanel loginPanel = new VerticalPanel();
+private Label loginLabel = new Label("Please sign in to your Google Account to access the StockWatcher application.");
+private Anchor signInLink = new Anchor("Sign In");
+private Anchor signOutLink = new Anchor("Sign Out");
+
 /**  * Entry point method.  */  
 public void onModuleLoad() { 
+	   // Check login status using login service.
+    LoginServiceAsync loginService = GWT.create(LoginService.class);
+    loginService.login(GWT.getHostPageBaseURL(), new AsyncCallback<LoginInfo>() {
+      public void onFailure(Throwable error) {
+      }
+
+      public void onSuccess(LoginInfo result) {
+        loginInfo = result;
+        if(loginInfo.isLoggedIn()) {
+          loadStockWatcher();
+        } else {
+          loadLogin();
+        }
+      }
+    });
+	
+	}
+
+private void loadLogin() {
+	//Build login panel
+	signInLink.setHref(loginInfo.getLoginUrl());
+	loginPanel.add(signInLink);
+	loginPanel.add(loginLabel);
+	RootPanel.get("stockList").add(loginPanel);
+}
+
+private void loadStockWatcher() {
+	
+	//Offer possibility to logout
+	signOutLink.setHref(loginInfo.getLogoutUrl());
 	
 	// Create table for stock data.  
 	stocksFlexTable.setText(0, 0, "Symbol");  
@@ -67,6 +104,7 @@ public void onModuleLoad() {
  addPanel.addStyleName("addPanel");
 
     // Assemble Main panel.
+ 	mainPanel.add(signOutLink);
     mainPanel.add(stocksFlexTable);
     //stocksFlexTable.setSize("283px", "58px");
     mainPanel.add(addPanel);
@@ -104,8 +142,7 @@ public void onModuleLoad() {
         }
       }
     });
-
-	}
+}
 
 /**
  * Add stock to FlexTable. Executed when the user clicks the addStockButton or
