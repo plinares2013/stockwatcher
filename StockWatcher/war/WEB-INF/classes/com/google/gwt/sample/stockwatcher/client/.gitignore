@@ -11,3 +11,9 @@
 /LoginInfo.class
 /LoginServiceAsync.class
 /StockWatcher$5.class
+/StockService.class
+/StockServiceAsync.class
+/NotLoggedInException.class
+/StockWatcher$6.class
+/StockWatcher$7.class
+/StockWatcher$8.class

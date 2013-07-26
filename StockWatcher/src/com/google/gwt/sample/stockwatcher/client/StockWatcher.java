@@ -51,12 +51,15 @@ private Label loginLabel = new Label("Please sign in to your Google Account to a
 private Anchor signInLink = new Anchor("Sign In");
 private Anchor signOutLink = new Anchor("Sign Out");
 
+private final StockServiceAsync stockService = GWT.create(StockService.class);
+
 /**  * Entry point method.  */  
 public void onModuleLoad() { 
 	   // Check login status using login service.
     LoginServiceAsync loginService = GWT.create(LoginService.class);
     loginService.login(GWT.getHostPageBaseURL(), new AsyncCallback<LoginInfo>() {
       public void onFailure(Throwable error) {
+    	  handleError(error);
       }
 
       public void onSuccess(LoginInfo result) {
@@ -96,6 +99,9 @@ private void loadStockWatcher() {
     stocksFlexTable.getCellFormatter().addStyleName(0, 1, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(0, 2, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(0, 3, "watchListRemoveColumn");
+    
+    //Retrieve stocks from persistence Datastore
+    loadStocks();
     
 	 // Assemble Add Stock panel.
     addPanel.add(newSymbolTextBox);
@@ -165,31 +171,74 @@ protected void addStock() {
 	    if (stocks.contains(symbol))
 	        return;
 	    
-	    // Add the stock to the table.
-	    int row = stocksFlexTable.getRowCount();
-	    stocks.add(symbol);
-	    stocksFlexTable.setText(row, 0, symbol);
-
-	    // Add a button to remove this stock from the table.
-	    // Add a button to remove this stock from the table.
-	    Button removeStockButton = new Button("x");
-	    removeStockButton.addClickHandler(new ClickHandler() {
-	      public void onClick(ClickEvent event) {
-	        int removedIndex = stocks.indexOf(symbol);
-	        stocks.remove(removedIndex);        stocksFlexTable.removeRow(removedIndex + 1);
-	      }
-	    });
-	    stocksFlexTable.setWidget(row, 3, removeStockButton);
-	    stocksFlexTable.setWidget(row, 2, new Label());
-	    
-	    stocksFlexTable.getCellFormatter().addStyleName(row, 1, "watchListNumericColumn");
-	    stocksFlexTable.getCellFormatter().addStyleName(row, 2, "watchListNumericColumn");
-	    stocksFlexTable.getCellFormatter().addStyleName(row, 3, "watchListRemoveColumn");
-	    removeStockButton.addStyleDependentName("remove");
-
-	    //Get the stock price.
-	    refreshWatchList();
+	    //Display stock
+	    addStock (symbol);
 	
+}
+
+//Persist in Datastore then display symbol
+private void addStock(final String symbol) {
+	StockServiceAsync stockService = GWT.create(StockService.class);
+	
+	stockService.addStock (symbol, new AsyncCallback<Void>() {
+		public void onFailure (Throwable error) {
+			handleError(error);
+		}
+		
+		@Override
+		public void onSuccess(Void ignore) {
+			displayStock(symbol);
+		}
+	});
+}
+
+//Logic to display stocks
+
+public void displayStock (final String symbol) {
+ 
+	// Add the stock to the table.
+    int row = stocksFlexTable.getRowCount();
+    stocks.add(symbol);
+    stocksFlexTable.setText(row, 0, symbol);
+
+    // Add a button to remove this stock from the table.
+    Button removeStockButton = new Button("x");
+    removeStockButton.addClickHandler(new ClickHandler() {
+      public void onClick(ClickEvent event) {
+    	removeStockSymbolInDatastore(symbol);
+        int removedIndex = stocks.indexOf(symbol);
+        stocks.remove(removedIndex);        
+        stocksFlexTable.removeRow(removedIndex + 1);
+      }
+    });
+    stocksFlexTable.setWidget(row, 3, removeStockButton);
+    stocksFlexTable.setWidget(row, 2, new Label());
+    
+    stocksFlexTable.getCellFormatter().addStyleName(row, 1, "watchListNumericColumn");
+    stocksFlexTable.getCellFormatter().addStyleName(row, 2, "watchListNumericColumn");
+    stocksFlexTable.getCellFormatter().addStyleName(row, 3, "watchListRemoveColumn");
+    removeStockButton.addStyleDependentName("remove");
+
+    //Get the stock price.
+    refreshWatchList();	
+}
+
+/**
+ * Remove the stock from the datastore
+ */
+private void removeStockSymbolInDatastore(String symbol) {
+	AsyncCallback<Void> callback = new AsyncCallback<Void> () {
+		@Override
+		public void onFailure(Throwable caught) {
+			handleError (caught);	
+		}
+		@Override
+		public void onSuccess(Void result) {
+			// TODO Auto-generated method stub	
+		}
+	};
+	
+	stockService.removeStock(symbol, callback);
 }
 
 /**
@@ -267,4 +316,26 @@ private void updateTable(StockPrice price) {
 	
 }
 
+private void loadStocks() {
+	
+	AsyncCallback<String[]> callback = new AsyncCallback<String[]>() {  
+		public void onFailure(Throwable error) {
+			handleError(error);
+		}  
+		@Override
+		public void onSuccess(String[] results) {  
+			for (String symbol : results) {
+				displayStock(symbol);
+			}  
+		}
+	};	
+
+	stockService.getStocks(callback);
+}
+private void  handleError (Throwable error) {
+	Window.alert (error.getMessage());
+	if (error instanceof NotLoggedInException) {
+		Window.Location.replace(loginInfo.getLogoutUrl());
+	}
+}
 }
