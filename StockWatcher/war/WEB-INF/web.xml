@@ -26,6 +26,16 @@
     <url-pattern>/stockwatcher/stock</url-pattern>
   </servlet-mapping>
   
+     <servlet>
+    <servlet-name>stockPrices</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.JsonStockData</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>stockPrices</servlet-name>
+    <url-pattern>/stockwatcher/stockPrices</url-pattern>
+  </servlet-mapping>
+  
   <!-- Default page to serve -->
   <welcome-file-list>
     <welcome-file>StockWatcher.html</welcome-file>
