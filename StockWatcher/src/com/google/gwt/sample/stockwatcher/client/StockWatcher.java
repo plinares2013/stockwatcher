@@ -27,6 +27,7 @@ import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.i18n.client.NumberFormat;
+import com.google.gwt.jsonp.client.JsonpRequestBuilder;
 import com.google.gwt.user.client.Random;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
@@ -66,7 +67,8 @@ private Anchor signOutLink = new Anchor("Sign Out");
 
 private final StockServiceAsync stockService = GWT.create(StockService.class);
 
-private static final String JSON_URL = GWT.getModuleBaseURL() + "stockPrices?q=";
+//private static final String JSON_URL = GWT.getModuleBaseURL() + "stockPrices?q=";
+private static final String JSON_URL = "http://query.yahooapis.com/v1/public/yql?q=select%20symbol%2CChangeinPercent%2C%20AskRealtime%2C%20Change%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(";
 
 private static Logger logger = Logger.getLogger("Client Logger");
 
@@ -289,36 +291,56 @@ private void refreshWatchList () {
 	// Append watch list stock symbols to query URL.
 	Iterator<String> iter = stocks.iterator();
 	while (iter.hasNext()) {
-	  url += iter.next();
+	  url += "\"" + iter.next() + "\"";
 	  if (iter.hasNext()) {
-	    url += "+";
+	    url += ",";
 	  }
 	}
 
 	url = URL.encode(url);
-
-	  // Send request to server and catch any errors.
-    RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, url);
-
-    try {
-      Request request = builder.sendRequest(null, new RequestCallback() {
-        public void onError(Request request, Throwable exception) {
-          displayError("Couldn't retrieve JSON");
-        }
-
-        public void onResponseReceived(Request request, Response response) {
-          if (200 == response.getStatusCode()) {
-            updateTable  ((JsArray<StockData>) JsonUtils.safeEval(response.getText()));
-          } else {
-            displayError("Couldn't retrieve JSON (" + response.getStatusText()
-                + ")");
-          }
-        }
-      });
-    } catch (RequestException e) {
-      displayError("Couldn't retrieve JSON");
-    }
+	
+	  JsonpRequestBuilder builder = new JsonpRequestBuilder();
+	    builder.requestObject(url, new AsyncCallback<JsArray<StockData>>() {
+	      public void onFailure(Throwable caught) {
+	        displayError("Couldn't retrieve JSON");
+	      }
+	      
+	      public void onSuccess(JsArray<StockData> data) {
+	        if (data == null) {
+	        	displayError ("No JSON data retrieved");
+	        	return;
+	        }
+	        
+	        updateTable(data);
+	      }
+	    });
 }
+
+/**
+ *
+ *	    // Send request to server and catch any errors.
+ *    RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, url);
+ *
+ *    try {
+ *      Request request = builder.sendRequest(null, new RequestCallback() {
+ *        public void onError(Request request, Throwable exception) {
+ *         displayError("Couldn't retrieve JSON");
+ *       }
+ *
+ *       public void onResponseReceived(Request request, Response response) {
+ *         if (200 == response.getStatusCode()) {
+ *           updateTable  ((JsArray<StockData>) JsonUtils.safeEval(response.getText()));
+ *         } else {
+ *           displayError("Couldn't retrieve JSON (" + response.getStatusText()
+ *               + ")");
+ *         }
+ *       }
+ *     });
+ *   } catch (RequestException e) {
+ *     displayError("Couldn't retrieve JSON");
+ *   }
+ *}
+**/
 
 /**  * If can't get JSON, display error message.  
  **    @param error  

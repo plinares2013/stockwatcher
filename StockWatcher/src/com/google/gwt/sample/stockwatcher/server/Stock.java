@@ -33,7 +33,7 @@ public class Stock {
 		this.symbol = symbol;
 	}
 	
-	public long getId() {
+	public Long getId() {
 		return this.id ;
 	}
 
