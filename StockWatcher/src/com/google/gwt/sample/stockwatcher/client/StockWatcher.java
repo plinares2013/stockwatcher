@@ -6,6 +6,7 @@ import com.google.gwt.http.client.RequestCallback;
 import com.google.gwt.http.client.RequestException; 
 import com.google.gwt.http.client.Response;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -15,6 +16,7 @@ import java.util.logging.Logger;
 import com.google.gwt.sample.stockwatcher.shared.FieldVerifier;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.core.client.JsonUtils;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -27,6 +29,10 @@ import com.google.gwt.event.dom.client.KeyUpHandler;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.i18n.client.NumberFormat;
+import com.google.gwt.json.client.JSONArray;
+import com.google.gwt.json.client.JSONNumber;
+import com.google.gwt.json.client.JSONObject;
+import com.google.gwt.json.client.JSONString;
 import com.google.gwt.jsonp.client.JsonpRequestBuilder;
 import com.google.gwt.user.client.Random;
 import com.google.gwt.user.client.Timer;
@@ -68,7 +74,11 @@ private Anchor signOutLink = new Anchor("Sign Out");
 private final StockServiceAsync stockService = GWT.create(StockService.class);
 
 //private static final String JSON_URL = GWT.getModuleBaseURL() + "stockPrices?q=";
-private static final String JSON_URL = "http://query.yahooapis.com/v1/public/yql?q=select%20symbol%2CChangeinPercent%2C%20AskRealtime%2C%20Change%20from%20yahoo.finance.quotes%20where%20symbol%20in%20(";
+private static final String JSON_URL = "http://query.yahooapis.com/v1/public/yql?q=select symbol, " +
+		"ChangeinPercent, AskRealtime, Change from yahoo.finance.quotes where symbol in (";
+private StockInformation data = new StockInformation();
+
+private StockInformation[] datas;
 
 private static Logger logger = Logger.getLogger("Client Logger");
 
@@ -294,24 +304,132 @@ private void refreshWatchList () {
 	  url += "\"" + iter.next() + "\"";
 	  if (iter.hasNext()) {
 	    url += ",";
+	  } else {
+	    url += ")&format=json&env=store://datatables.org/alltableswithkeys";
 	  }
 	}
 
 	url = URL.encode(url);
 	
 	  JsonpRequestBuilder builder = new JsonpRequestBuilder();
-	    builder.requestObject(url, new AsyncCallback<JsArray<StockData>>() {
+	    builder.requestObject(url, new AsyncCallback<JavaScriptObject>() {
 	      public void onFailure(Throwable caught) {
 	        displayError("Couldn't retrieve JSON");
 	      }
 	      
-	      public void onSuccess(JsArray<StockData> data) {
-	        if (data == null) {
+	      public void onSuccess(JavaScriptObject jso) {
+	        if (jso == null) {
 	        	displayError ("No JSON data retrieved");
 	        	return;
 	        }
 	        
-	        updateTable(data);
+	        JSONObject query;
+	        JSONObject results;
+	        JSONObject quote;
+	        JSONArray quotes;
+	        
+	        JSONString jSymbol;
+	        JSONString jPrice;
+	        JSONString jChange;
+	        JSONString jPercentChange;
+	        
+	        String symbol, sPrice, sChange, sPercentChange;
+	        double price, change, percentChange;
+	        
+	        JSONObject jsonObj= new JSONObject(jso);
+	        query = (JSONObject) jsonObj.get("query").isObject();
+	        JSONNumber jCount = query.get("count").isNumber();
+	        int count = (int) jCount.doubleValue();
+	        
+	        switch (count) {
+	        case 0: 
+	        	logger.log(Level.WARNING,"No JSON returned for the requested stock");
+	        	break;
+	        	
+	        case 1: 
+	        	query = (JSONObject) jsonObj.get("query").isObject();
+	        	results = (JSONObject) query.get("results").isObject();
+	        	quote = (JSONObject) results.get("quote").isObject();
+	        
+	        	jSymbol = (JSONString) quote.get("symbol").isString();
+	        	jPrice = (JSONString) quote.get("AskRealtime").isString();
+	        	jChange = (JSONString) quote.get("Change").isString();
+	        	jPercentChange = (JSONString) quote.get("ChangeinPercent").isString();
+	        	
+	        	symbol = (String) jSymbol.toString();
+	        	symbol = symbol.replaceAll("\"","");
+	        	sPrice = jPrice.toString();
+	        	sPrice = sPrice.replaceAll("\"","");
+	        	price =  Double.parseDouble(sPrice);
+	        	sChange = jChange.toString();
+	        	sChange = sChange.replaceAll("\"","");
+	        	change = Double.parseDouble(sChange);
+	        	sPercentChange = jPercentChange.toString();
+	        	sPercentChange = sPercentChange.replaceAll("\"","");
+	        	sPercentChange = sPercentChange.replaceAll("%","");
+	        	percentChange = Double.parseDouble(sPercentChange);
+	        	
+	        	data.setSymbol(symbol);
+	        	data.setPrice(price);
+	        	data.setChange(change);
+	        	data.setPercentChange(percentChange);
+        	
+	        
+	        	updateTable(data);
+	        	
+	            break;
+	    
+	        default:
+	        	
+	        	datas = new StockInformation[count];
+	        	
+	        	query = (JSONObject) jsonObj.get("query").isObject();
+	        	results = (JSONObject) query.get("results").isObject();
+	        	quotes = (JSONArray) results.get("quote");
+	        	
+	        	for (int i=0; i<quotes.size(); i++) {
+	        		quote = quotes.get(i).isObject();
+	        		jSymbol = quote.get("symbol").isString();
+	        		jPrice = (JSONString) quote.get("AskRealtime").isString();
+		        	jChange = (JSONString) quote.get("Change").isString();
+		        	jPercentChange = (JSONString) quote.get("ChangeinPercent").isString();
+		        	
+		        		symbol = (String) jSymbol.toString();
+		        		symbol = symbol.replaceAll("\"","");
+
+		        		if (jPrice == null) {
+		        			sPrice = "0";
+		        		} else {
+			        		sPrice = jPrice.toString();
+			        		sPrice = sPrice.replaceAll("\"","");
+		        		}
+		        		price =  Double.parseDouble(sPrice);
+		        		if (jChange == null) {
+		        			sChange = "0";
+		        		} else {
+			        		sChange = jChange.toString();
+			        		sChange = sChange.replaceAll("\"","");
+		        		}
+		        		change = Double.parseDouble(sChange);
+		        		if (jPercentChange == null) {
+		        			sPercentChange = "0";
+		        		} else {
+			        		sPercentChange = jPercentChange.toString();
+			        		sPercentChange = sPercentChange.replaceAll("\"","");
+			        		sPercentChange = sPercentChange.replaceAll("%","");
+		        		}
+		        		percentChange = Double.parseDouble(sPercentChange);
+
+		        	datas[i] = new StockInformation();
+		        	datas[i].setSymbol(symbol);
+		        	datas[i].setPrice(price);
+		        	datas[i].setChange(change);
+		        	datas[i].setPercentChange(percentChange);	
+		        	
+	        	}
+	        	updateTable (datas);
+	        	break;
+	        }
 	      }
 	    });
 }
@@ -384,7 +502,7 @@ private void displayError(String error) {
  *
  * @param price Stock data for a single row.
  */
-// private void updateTable_orig(StockPrice price) Original call
+// private void updateTable(StockInfo price)
 
 private void updateTable (StockData price) {
 	   // Make sure the stock is still in the stock table.
@@ -418,6 +536,55 @@ private void updateTable (StockData price) {
     changeWidget.setStyleName(changeStyleName);
 	
 }
+
+
+// Update the information of the stocks in the table
+private void updateTable(StockInformation[] infos) {
+	for ( int i=0; i< infos.length ; i++) {
+		updateTable(infos[i]);
+	}
+	
+	// Display timestamp showing last refresh.  
+    lastUpdatedLabel.setText("Last update : "  + DateTimeFormat.getMediumDateTimeFormat().format(new Date()));
+  
+    // Clear any errors.  
+    errorMsgLabel.setVisible(false);
+ }
+
+// Update one line for each stock in the table of stocks
+private void updateTable(StockInformation info) {
+	   // Make sure the stock is still in the stock table.
+ if (!stocks.contains(info.getSymbol())) {
+   return;
+ }
+
+ int row = stocks.indexOf(info.getSymbol()) + 1;
+
+ // Format the data in the Price and Change fields.
+ String priceText = NumberFormat.getFormat("#,##0.00").format(
+     info.getPrice());
+ NumberFormat changeFormat = NumberFormat.getFormat("+#,##0.00;-#,##0.00");
+ String changeText = changeFormat.format(info.getChange());
+ String changePercentText = changeFormat.format(info.getChangePercent());
+
+ // Populate the Price and Change fields with new data.
+ stocksFlexTable.setText(row, 1, priceText);
+ Label changeWidget = (Label)stocksFlexTable.getWidget(row, 2);
+ changeWidget.setText(changeText + " (" + changePercentText + "%)");
+ 
+ // Change the color of text in the Change field based on its value.
+ String changeStyleName = "noChange";
+ if (info.getChangePercent() < -0.1f) {
+   changeStyleName = "negativeChange";
+ }
+ else if (info.getChangePercent() > 0.1f) {
+   changeStyleName = "positiveChange";
+ }
+
+ changeWidget.setStyleName(changeStyleName);
+	
+}
+
 
 private void loadStocks() {
 	
