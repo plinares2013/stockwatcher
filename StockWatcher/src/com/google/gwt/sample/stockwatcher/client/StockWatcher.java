@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.google.gwt.sample.stockwatcher.client.QueryYQL.Quote;
 import com.google.gwt.sample.stockwatcher.shared.FieldVerifier;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
@@ -278,22 +279,6 @@ private void removeStockSymbolInDatastore(String symbol) {
 /**
  *  Generate stock price
  */
-private void refreshWatchList_orig() {
-    //Auto-generated method stub
-    final double MAX_PRICE = 100.0; // $100.00
-    final double MAX_PRICE_CHANGE = 0.02; // +/- 2%
-
-    StockPrice[] prices = new StockPrice[stocks.size()];
-    for (int i = 0; i < stocks.size(); i++) {
-      double price = Random.nextDouble() * MAX_PRICE;
-      double change = price * MAX_PRICE_CHANGE
-          * (Random.nextDouble() * 2.0 - 1.0);
-
-      prices[i] = new StockPrice(stocks.get(i), price, change);
-    }
-
-   // updateTable(prices);
-  }
 
 private void refreshWatchList () {
 	String url = JSON_URL;
@@ -312,153 +297,68 @@ private void refreshWatchList () {
 	url = URL.encode(url);
 	
 	  JsonpRequestBuilder builder = new JsonpRequestBuilder();
-	    builder.requestObject(url, new AsyncCallback<JavaScriptObject>() {
+	    builder.requestObject(url, new AsyncCallback<QueryYQL>() {
 	      public void onFailure(Throwable caught) {
 	        displayError("Couldn't retrieve JSON");
 	      }
 	      
-	      public void onSuccess(JavaScriptObject jso) {
-	        if (jso == null) {
+	      public void onSuccess(QueryYQL query) {
+	        if (query == null) {
 	        	displayError ("No JSON data retrieved");
 	        	return;
 	        }
 	        
-	        JSONObject query;
-	        JSONObject results;
-	        JSONObject quote;
-	        JSONArray quotes;
-	        
-	        JSONString jSymbol;
-	        JSONString jPrice;
-	        JSONString jChange;
-	        JSONString jPercentChange;
-	        
 	        String symbol, sPrice, sChange, sPercentChange;
 	        double price, change, percentChange;
+	        StockInformation[] datas;
+	       
 	        
-	        JSONObject jsonObj= new JSONObject(jso);
-	        query = (JSONObject) jsonObj.get("query").isObject();
-	        JSONNumber jCount = query.get("count").isNumber();
-	        int count = (int) jCount.doubleValue();
+	        int count;
 	        
-	        switch (count) {
-	        case 0: 
+	        count = query.getCount();
+	    
+	        if (count==0) {
 	        	logger.log(Level.WARNING,"No JSON returned for the requested stock");
-	        	break;
-	        	
-	        case 1: 
-	        	query = (JSONObject) jsonObj.get("query").isObject();
-	        	results = (JSONObject) query.get("results").isObject();
-	        	quote = (JSONObject) results.get("quote").isObject();
+	        	return;
+	        }
 	        
-	        	jSymbol = (JSONString) quote.get("symbol").isString();
-	        	jPrice = (JSONString) quote.get("AskRealtime").isString();
-	        	jChange = (JSONString) quote.get("Change").isString();
-	        	jPercentChange = (JSONString) quote.get("ChangeinPercent").isString();
-	        	
-	        	symbol = (String) jSymbol.toString();
-	        	symbol = symbol.replaceAll("\"","");
-	        	sPrice = jPrice.toString();
-	        	sPrice = sPrice.replaceAll("\"","");
-	        	price =  Double.parseDouble(sPrice);
-	        	sChange = jChange.toString();
-	        	sChange = sChange.replaceAll("\"","");
+	        datas = new StockInformation[count];
+	        
+	        for (int i=0; i<query.getCount(); i++) {
+	        	Quote quote = query.getQuote(i);
+	        	symbol = quote.getSymbol();
+	        	if ((sPrice = quote.getAskRealtime()) == null){
+	        		sPrice = "0";
+	        	}else {
+	        		sPrice = sPrice.replaceAll("\"", "");
+	        	}
+	        	price = Double.parseDouble(sPrice);
+	        	if ((sChange = quote.getChange()) == null) {
+	        		sChange="0";
+	        	} else {
+	        		sChange = sChange.replaceAll("\"","");
+	        	}
 	        	change = Double.parseDouble(sChange);
-	        	sPercentChange = jPercentChange.toString();
-	        	sPercentChange = sPercentChange.replaceAll("\"","");
-	        	sPercentChange = sPercentChange.replaceAll("%","");
+	        	if ((sPercentChange = quote.getChangeinPercent()) == null) {
+	        		sPercentChange = "0";
+	        	} else {
+	        		sPercentChange = sPercentChange.replaceAll("\"", "");
+	        		sPercentChange = sPercentChange.replaceAll("%","");
+	        	}
 	        	percentChange = Double.parseDouble(sPercentChange);
 	        	
-	        	data.setSymbol(symbol);
-	        	data.setPrice(price);
-	        	data.setChange(change);
-	        	data.setPercentChange(percentChange);
-        	
-	        
-	        	updateTable(data);
-	        	
-	            break;
-	    
-	        default:
-	        	
-	        	datas = new StockInformation[count];
-	        	
-	        	query = (JSONObject) jsonObj.get("query").isObject();
-	        	results = (JSONObject) query.get("results").isObject();
-	        	quotes = (JSONArray) results.get("quote");
-	        	
-	        	for (int i=0; i<quotes.size(); i++) {
-	        		quote = quotes.get(i).isObject();
-	        		jSymbol = quote.get("symbol").isString();
-	        		jPrice = (JSONString) quote.get("AskRealtime").isString();
-		        	jChange = (JSONString) quote.get("Change").isString();
-		        	jPercentChange = (JSONString) quote.get("ChangeinPercent").isString();
-		        	
-		        		symbol = (String) jSymbol.toString();
-		        		symbol = symbol.replaceAll("\"","");
-
-		        		if (jPrice == null) {
-		        			sPrice = "0";
-		        		} else {
-			        		sPrice = jPrice.toString();
-			        		sPrice = sPrice.replaceAll("\"","");
-		        		}
-		        		price =  Double.parseDouble(sPrice);
-		        		if (jChange == null) {
-		        			sChange = "0";
-		        		} else {
-			        		sChange = jChange.toString();
-			        		sChange = sChange.replaceAll("\"","");
-		        		}
-		        		change = Double.parseDouble(sChange);
-		        		if (jPercentChange == null) {
-		        			sPercentChange = "0";
-		        		} else {
-			        		sPercentChange = jPercentChange.toString();
-			        		sPercentChange = sPercentChange.replaceAll("\"","");
-			        		sPercentChange = sPercentChange.replaceAll("%","");
-		        		}
-		        		percentChange = Double.parseDouble(sPercentChange);
-
-		        	datas[i] = new StockInformation();
-		        	datas[i].setSymbol(symbol);
-		        	datas[i].setPrice(price);
-		        	datas[i].setChange(change);
-		        	datas[i].setPercentChange(percentChange);	
-		        	
-	        	}
-	        	updateTable (datas);
-	        	break;
+	        	datas[i] = new StockInformation();
+	        	datas[i].setSymbol(symbol);
+	        	datas[i].setPrice(price);
+	        	datas[i].setChange(change);
+	        	datas[i].setPercentChange(percentChange);
 	        }
+        	updateTable(datas);
 	      }
-	    });
-}
+	    });        
 
-/**
- *
- *	    // Send request to server and catch any errors.
- *    RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, url);
- *
- *    try {
- *      Request request = builder.sendRequest(null, new RequestCallback() {
- *        public void onError(Request request, Throwable exception) {
- *         displayError("Couldn't retrieve JSON");
- *       }
- *
- *       public void onResponseReceived(Request request, Response response) {
- *         if (200 == response.getStatusCode()) {
- *           updateTable  ((JsArray<StockData>) JsonUtils.safeEval(response.getText()));
- *         } else {
- *           displayError("Couldn't retrieve JSON (" + response.getStatusText()
- *               + ")");
- *         }
- *       }
- *     });
- *   } catch (RequestException e) {
- *     displayError("Couldn't retrieve JSON");
- *   }
- *}
-**/
+
+}
 
 /**  * If can't get JSON, display error message.  
  **    @param error  
