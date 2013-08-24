@@ -36,6 +36,16 @@
     <url-pattern>/stockwatcher/stockPrices</url-pattern>
   </servlet-mapping>
   
+    <servlet>
+    <servlet-name>yahooQuoteService</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.YahooStockServiceImpl</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>yahooQuoteService</servlet-name>
+    <url-pattern>/stockwatcher/yahooQuote</url-pattern>
+  </servlet-mapping>
+  
   <!-- Default page to serve -->
   <welcome-file-list>
     <welcome-file>StockWatcher.html</welcome-file>

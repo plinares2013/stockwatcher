@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 
 import com.google.gwt.sample.stockwatcher.client.QueryYQL.Quote;
 import com.google.gwt.sample.stockwatcher.shared.FieldVerifier;
+import com.google.gwt.sample.stockwatcher.shared.StockInformation;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JavaScriptObject;
@@ -73,10 +74,11 @@ private Anchor signInLink = new Anchor("Sign In");
 private Anchor signOutLink = new Anchor("Sign Out");
 
 private final StockServiceAsync stockService = GWT.create(StockService.class);
+private final YahooQuoteServiceAsync yQuoteService = GWT.create(YahooQuoteService.class);
 
 //private static final String JSON_URL = GWT.getModuleBaseURL() + "stockPrices?q=";
 private static final String JSON_URL = "http://query.yahooapis.com/v1/public/yql?q=select symbol, " +
-		"ChangeinPercent, AskRealtime, Change from yahoo.finance.quotes where symbol in (";
+		"ChangeinPercent, LastTradePriceOnly, Change from yahoo.finance.quotes where symbol in (";
 private StockInformation data = new StockInformation();
 
 private StockInformation[] datas;
@@ -130,9 +132,6 @@ private void loadStockWatcher() {
     stocksFlexTable.getCellFormatter().addStyleName(0, 2, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(0, 3, "watchListRemoveColumn");
     
-    //Retrieve stocks from persistence Datastore
-    loadStocks();
-    
 	 // Assemble Add Stock panel.
     addPanel.add(newSymbolTextBox);
     addPanel.add(addStockButton);
@@ -158,6 +157,9 @@ private void loadStockWatcher() {
     
     // Move cursor focus to the input box.
     newSymbolTextBox.setFocus(true);
+    
+    //Retrieve stocks from persistence Datastore
+    loadStocks();
     
     // Setup timer to refresh list automatically.
     Timer refreshTimer = new Timer() {
@@ -296,7 +298,11 @@ private void refreshWatchList () {
 
 	url = URL.encode(url);
 	
-	  JsonpRequestBuilder builder = new JsonpRequestBuilder();
+	//First method to refresh stock data is to contact
+	// the Yahoo REST API directly from the client (this program)
+	
+/*
+ * 	  JsonpRequestBuilder builder = new JsonpRequestBuilder();
 	    builder.requestObject(url, new AsyncCallback<QueryYQL>() {
 	      public void onFailure(Throwable caught) {
 	        displayError("Couldn't retrieve JSON");
@@ -327,7 +333,7 @@ private void refreshWatchList () {
 	        for (int i=0; i<query.getCount(); i++) {
 	        	Quote quote = query.getQuote(i);
 	        	symbol = quote.getSymbol();
-	        	if ((sPrice = quote.getAskRealtime()) == null){
+	        	if ((sPrice = quote.getLastTradePriceOnly()) == null){
 	        		sPrice = "0";
 	        	}else {
 	        		sPrice = sPrice.replaceAll("\"", "");
@@ -356,8 +362,26 @@ private void refreshWatchList () {
         	updateTable(datas);
 	      }
 	    });        
+*/
+	    //Second method to refresh a stock is to call the server using RPC 
+	    // and have the server fetch the stock information from Yahoo REST API.
+	    // The data sent back from the server is a StockInformation[] .
+	    
+	    
+	 
 
-
+			  AsyncCallback<StockInformation[]> yCallback = new AsyncCallback<StockInformation[]> () {
+				  public void onFailure (Throwable error) {
+				        displayError("Couldn't retrieve stock info from yQuoteService");
+				  }
+				  
+				  public void onSuccess (StockInformation stockInfo[]) {
+					  StockInformation[] datas = stockInfo;
+					  updateTable(datas);
+				  }
+			  };
+			  yQuoteService.getStockInformation(stocks.toArray(new String[stocks.size()]), yCallback);
+		  	
 }
 
 /**  * If can't get JSON, display error message.  
@@ -373,70 +397,13 @@ private void displayError(String error) {
  * @param prices Stock data for all rows.
  */
 
-/* 
- *  Unused code
- *
- * private void updateTable_orig (StockPrice[] prices) {
- *    // Auto-generated method stub
- *   for (int i = 0; i < prices.length; i++) {
- *       //updateTable(prices[i]);
- *     }
- *}
- */   
-    private void updateTable(JsArray<StockData> prices) {
-        // Auto-generated method stub
-        for (int i = 0; i < prices.length(); i++) {
-            updateTable(prices.get(i));
-          }
-    
- // Display timestamp showing last refresh.  
-    lastUpdatedLabel.setText("Last update : "  + DateTimeFormat.getMediumDateTimeFormat().format(new Date()));
   
- // Clear any errors.  
-    errorMsgLabel.setVisible(false);
-    }
-
 
 /**
  * Update a single row in the stock table.
  *
  * @param price Stock data for a single row.
  */
-// private void updateTable(StockInfo price)
-
-private void updateTable (StockData price) {
-	   // Make sure the stock is still in the stock table.
-    if (!stocks.contains(price.getSymbol())) {
-      return;
-    }
-
-    int row = stocks.indexOf(price.getSymbol()) + 1;
-
-    // Format the data in the Price and Change fields.
-    String priceText = NumberFormat.getFormat("#,##0.00").format(
-        price.getPrice());
-    NumberFormat changeFormat = NumberFormat.getFormat("+#,##0.00;-#,##0.00");
-    String changeText = changeFormat.format(price.getChange());
-    String changePercentText = changeFormat.format(price.getChangePercent());
-
-    // Populate the Price and Change fields with new data.
-    stocksFlexTable.setText(row, 1, priceText);
-    Label changeWidget = (Label)stocksFlexTable.getWidget(row, 2);
-    changeWidget.setText(changeText + " (" + changePercentText + "%)");
-    
-    // Change the color of text in the Change field based on its value.
-    String changeStyleName = "noChange";
-    if (price.getChangePercent() < -0.1f) {
-      changeStyleName = "negativeChange";
-    }
-    else if (price.getChangePercent() > 0.1f) {
-      changeStyleName = "positiveChange";
-    }
-
-    changeWidget.setStyleName(changeStyleName);
-	
-}
-
 
 // Update the information of the stocks in the table
 private void updateTable(StockInformation[] infos) {
