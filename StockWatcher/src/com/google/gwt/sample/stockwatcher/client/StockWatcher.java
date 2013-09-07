@@ -285,6 +285,11 @@ private void removeStockSymbolInDatastore(String symbol) {
 private void refreshWatchList () {
 	String url = JSON_URL;
 
+	//Nothing to refresh if the list is empty
+	if (stocks.isEmpty()) {
+		return;
+	}
+	
 	// Append watch list stock symbols to query URL.
 	Iterator<String> iter = stocks.iterator();
 	while (iter.hasNext()) {
@@ -460,7 +465,11 @@ private void loadStocks() {
 			handleError(error);
 		}  
 		@Override
-		public void onSuccess(String[] results) {  
+		public void onSuccess(String[] results) { 
+			if (results.length == 0 ){
+				return;
+			}
+				
 			for (String symbol : results) {
 				displayStock(symbol);
 			}  

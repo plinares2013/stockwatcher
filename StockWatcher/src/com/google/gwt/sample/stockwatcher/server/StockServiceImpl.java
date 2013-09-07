@@ -24,17 +24,17 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 	//private static PersistenceManagerFactory PMF = JDOHelper.getPersistenceManagerFactory("transactions-optional");
 	
 	public void addStock (String symbol) throws NotLoggedInException {
-		checkLoggedIn();
+		UtilityClass.checkLoggedIn();
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		try {
-			pm.makePersistent(new Stock (getUser(), symbol));
+			pm.makePersistent(new Stock (UtilityClass.getUser(), symbol));
 		} finally {
 			pm.close();
 		}
 	}
 		
 	public void removeStock (String symbol) throws NotLoggedInException {
-		checkLoggedIn();
+		UtilityClass.checkLoggedIn();
 		PersistenceManager pm = PMF.get().getPersistenceManager();	
 		
 		try {
@@ -42,7 +42,7 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 			Query q = pm.newQuery(Stock.class, "user==u");
 			q.declareParameters("com.google.appengine.api.users.User u");
 			q.setOrdering("createDate");
-			List<Stock> stocks = (List<Stock>) q.execute(getUser());
+			List<Stock> stocks = (List<Stock>) q.execute(UtilityClass.getUser());
 			
 			for (Stock stock : stocks) {
 				if (stock.getSymbol().equals(symbol)) {
@@ -61,7 +61,7 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 	
 	public String[] getStocks() throws NotLoggedInException {
 		List<String> symbolList = new ArrayList<String>();
-		checkLoggedIn();
+		UtilityClass.checkLoggedIn();
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		try {
 		Query q = pm.newQuery(Stock.class, "user==u");
@@ -70,7 +70,7 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 		//						"parameters String tickerParam");
 		q.declareParameters("com.google.appengine.api.users.User u");
 		q.setOrdering("createDate");
-		List<Stock> stocks = (List<Stock>) q.execute(getUser());
+		List<Stock> stocks = (List<Stock>) q.execute(UtilityClass.getUser());
 		//List<Stock> stocks = (List<Stock>) q.execute("XOM");
 		//List<Stock> stocks = (List<Stock>) q.execute();
 		
@@ -84,17 +84,5 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 		return (String[]) symbolList.toArray(new String[0]);
 	}
 		
-	private User getUser() {
-		UserService userSvc = UserServiceFactory.getUserService();
-		User user = userSvc.getCurrentUser();
-		LOG.log(Level.WARNING, "User email is " + user.getEmail() );
-		return user ;
-	}
 	
-	private void checkLoggedIn() throws NotLoggedInException {
-		if (getUser() == null) {
-			throw new NotLoggedInException ("Not logged in.") ;
-		}
-	
-	}
 }

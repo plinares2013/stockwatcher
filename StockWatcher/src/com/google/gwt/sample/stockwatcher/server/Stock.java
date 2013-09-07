@@ -22,6 +22,13 @@ public class Stock {
 	private String symbol;
 	@Persistent
 	private Date createDate;
+	@Persistent
+	private double price;
+	@Persistent
+	private double change;
+	@Persistent
+	private double percentChange;
+	
 	
 	public Stock() {
 		this.createDate = new Date();
@@ -31,6 +38,15 @@ public class Stock {
 		this();
 		this.user = user;
 		this.symbol = symbol;
+	}
+	
+	public Stock (User user, String symbol, double price, double change, double percentChange) {
+		this();
+		this.user = user;
+		this.symbol = symbol;
+		this.price = price;
+		this.change = change;
+		this.percentChange = percentChange;
 	}
 	
 	public Long getId() {
@@ -55,5 +71,25 @@ public class Stock {
 	
 	public void setUser(User user) {
 		this.user = user;
+	}
+	
+	public void setPrice (double price) {
+		this.price = price;
+	}
+	
+	public double getPrice() {
+		return this.price;
+	}
+	
+	public void setChange (double change) {
+		this.change = change;
+	}
+	
+	public void setPercentChange (double percentChange) {
+		this.percentChange = percentChange;
+	}
+	
+	public double getPercentChange () {
+		return this.percentChange;
 	}
 }

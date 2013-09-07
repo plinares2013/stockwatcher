@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.jdo.PersistenceManager;
+import javax.jdo.Query;
 import javax.json.Json;
 import javax.json.stream.JsonParser;
 import javax.ws.rs.client.Client;
@@ -31,11 +33,13 @@ import org.mortbay.util.UrlEncoded;
 
 
 
+
 import com.google.appengine.api.urlfetch.HTTPRequest;
 import com.google.appengine.api.urlfetch.HTTPResponse;
 import com.google.appengine.api.urlfetch.URLFetchService;
 import com.google.appengine.api.urlfetch.URLFetchServiceFactory;
 import com.google.gson.stream.JsonReader;
+import com.google.gwt.sample.stockwatcher.client.NotLoggedInException;
 import com.google.gwt.sample.stockwatcher.client.YahooQuoteService;
 import com.google.gwt.sample.stockwatcher.shared.StockInformation;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
@@ -44,11 +48,13 @@ import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		YahooQuoteService {
 	
-	
+	private static final Logger LOG = Logger.getLogger(StockServiceImpl.class.getName());
 	private static final String YAHOO_URL = "http://query.yahooapis.com/v1/public/yql?q=select symbol, ChangeinPercent, LastTradePriceOnly, Change from yahoo.finance.quotes where symbol in (";
 	
 	private static Logger logger = Logger.getLogger("Client Logger");
 	String sPrice = "", sChange = "", sPercentChange = "", symbol="";
+	Stock stockNew;
+	double price = 0, change = 0, percentChange = 0;
 	StockInformation[] datas;
 	private int count = 0;
 	private int internalCounter=0;
@@ -59,7 +65,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		String url="";
 		String query = "";
 		
-		double price = 0, change = 0, percentChange = 0;
+
 		int check = symbols.length;
 		datas = new StockInformation[symbols.length];
 		for (int i=0; i<symbols.length; i++) {
@@ -144,24 +150,81 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		
 		Invocation invocation = target.request().buildGet();
 		Response response = invocation.invoke();
-		
+
+// 		TODO Check the status of the response
 //		Assert.assertTrue (response.getStatusInfo() == Response.Status.OK);
 		query = response.readEntity (String.class);
 		StringReader reader = new StringReader (query);
 		JsonParser parser = Json.createParser(reader);
+
+
+		//Parse all information
+		datas = parseYahooResults (parser);
+		
+//     
+		
+		//Make freshly retrieved data persistent in database
+		try {
+			PersistsResultsYahooQuote (datas);
+		} catch (NotLoggedInException e ){
+			LOG.log(Level.WARNING,"Cannot store stock info in datastore");
+		}
+		
+		// Then send the stocks back to the browser for display
+		return datas;
+	}
+	
+	private enum StockFields {
+		SYMBOL(0) {
+			@Override
+			public String toString() {
+				return ("symbol");
+			}	
+		},
+		PRICE(1) {
+			@Override
+			public String toString() {
+				return ("LastTradePriceOnly");
+			}
+		},
+		CHANGE(2) {
+			@Override 
+			public String toString() {
+				return ("Change");
+			}
+		},
+		PERCENTCHANGE(3) {
+			@Override
+			public String toString() {
+				return ("ChangeinPercent");
+			}
+		};
+		
+		private int value;
+		private StockFields (int value) {
+			this.value = value;
+		}
+		
+		private int getValue() {
+			return (this.value);
+		}
+	};
+	
+	private StockInformation[] parseYahooResults (JsonParser parser) {
+
+		//TODO - Replace all references to JSON fields with an Enum and a loop.
 		
 		count = 0;
-		
 		while (parser.hasNext() ) {
 			JsonParser.Event event = parser.next();
 			while (parser.hasNext() && !(event.equals (JsonParser.Event.KEY_NAME) &&  
-					parser.getString().matches("LastTradePriceOnly"))  &&
+					parser.getString().matches(StockFields.PRICE.toString()))  &&
 					!(event.equals (JsonParser.Event.KEY_NAME) && 
-						parser.getString().matches("ChangeinPercent"))   &&
+						parser.getString().matches(StockFields.PERCENTCHANGE.toString()))   &&
 					!(event.equals(JsonParser.Event.KEY_NAME)  &&  
-						parser.getString().matches("Change"))  &&
+						parser.getString().matches(StockFields.CHANGE.toString()))  &&
 					!(event.equals(JsonParser.Event.KEY_NAME)&& 
-							parser.getString().matches("symbol")) ) {
+							parser.getString().matches(StockFields.SYMBOL.toString())) ) {
 				event = parser.next();
 				}
 			
@@ -212,12 +275,49 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 					checkCountIncrement();
 					continue;
 				}	
-	
-
 		}
-		return datas;
+		return (datas);
 	}
 
+	private void PersistsResultsYahooQuote(StockInformation[] datas) throws NotLoggedInException {
+		
+		//Checking if the stock already exists in the datastore
+		UtilityClass.checkLoggedIn();
+		PersistenceManager pm = PMF.get().getPersistenceManager();	
+		
+		try {
+			Query q = pm.newQuery(Stock.class, "user==u");
+			q.declareParameters("com.google.appengine.api.users.User u");
+			q.setOrdering("createDate");
+			List<Stock> stocks = (List<Stock>) q.execute(UtilityClass.getUser());
+			
+			for (StockInformation stockInfo : datas) {
+				for (Stock stock : stocks) {
+					// If stock is already in datastore, refresh with updated data
+					if (stock.getSymbol().equals(stockInfo.getSymbol())) {
+						stock.setPrice(stockInfo.getPrice());
+						stock.setChange(stockInfo.getChange());
+						stock.setPercentChange(stockInfo.getChangePercent());
+						pm.makePersistent(stock);
+						break;
+					}
+				}
+				//If we execute this code, then we have a new Stock
+				stockNew = new Stock (UtilityClass.getUser(), stockInfo.getSymbol(),stockInfo.getPrice(), 
+						stockInfo.getChange(),stockInfo.getChangePercent());
+
+				pm.makePersistent(stockNew);
+			} 
+			
+		} finally {
+			pm.close();
+		}
+	}
+
+	/*	  
+	 * Need to keep a counter for the parser. Count the number of times the parser has extracted 
+	 * a field from the JSON. When all fields are read, iterate with next stock symbol.
+	 */
 	private void checkCountIncrement() {
 		if (internalCounter == 3) {
 			internalCounter=0;
