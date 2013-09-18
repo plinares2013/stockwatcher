@@ -44,18 +44,26 @@ import com.google.gwt.sample.stockwatcher.client.YahooQuoteService;
 import com.google.gwt.sample.stockwatcher.shared.StockInformation;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
+// TODO Need to make this class thread safe to have increased scalability. 
+// Specifically the parseYahooResults().
 
 public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		YahooQuoteService {
 	
 	private static final Logger LOG = Logger.getLogger(StockServiceImpl.class.getName());
-	private static final String YAHOO_URL = "http://query.yahooapis.com/v1/public/yql?q=select symbol, ChangeinPercent, LastTradePriceOnly, Change from yahoo.finance.quotes where symbol in (";
+	private static final String YAHOO_URL = "http://query.yahooapis.com/v1/public/yql?q=select symbol, Change, EPSEstimateCurrentYear, " +
+			"EPSEstimateNextYear, LastTradePriceOnly, ChangeinPercent, PriceSales, PriceBook, PERatio, PEGRatio, PriceEPSEstimateCurrentYear," +
+			"PriceEPSEstimateNextYear from yahoo.finance.quotes where symbol in (";
 	
 	private static Logger logger = Logger.getLogger("Client Logger");
 	String sPrice = "", sChange = "", sPercentChange = "", symbol="";
+	String sPriceSales = "", sPriceBook = "", sEPSEstimateCurrentYear = "", sEPSEstimateNextYear = "";
+	String sPriceEPSEstimateCurrentYear = "", sPriceEPSEstimateNextYear = "", sPERatio = "", sPEGRatio = "";
 	Stock stockNew;
-	double price = 0, change = 0, percentChange = 0;
+	double price = 0, change = 0, percentChange = 0, priceSales =0, priceBook = 0, PERatio = 0, PEGRatio = 0;
+	double EPSEstimateCurrentYear = 0, EPSEstimateNextYear = 0, PriceEPSEstimateCurrentYear = 0, PriceEPSEstimateNextYear = 0;
 	StockInformation[] datas;
+	Stock[] completeInfo;
 	private int count = 0;
 	private int internalCounter=0;
 
@@ -65,11 +73,11 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		String url="";
 		String query = "";
 		
-
-		int check = symbols.length;
 		datas = new StockInformation[symbols.length];
+		completeInfo = new Stock[symbols.length];
 		for (int i=0; i<symbols.length; i++) {
 			datas[i] = new StockInformation();
+			completeInfo[i] = new Stock();
 		}
 	
 /*
@@ -159,18 +167,28 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 
 
 		//Parse all information
-		datas = parseYahooResults (parser);
+		completeInfo = parseYahooResults (parser);
 		
 //     
 		
 		//Make freshly retrieved data persistent in database
 		try {
-			PersistsResultsYahooQuote (datas);
+			PersistsResultsYahooQuote (completeInfo);
 		} catch (NotLoggedInException e ){
-			LOG.log(Level.WARNING,"Cannot store stock info in datastore");
+			LOG.log(Level.WARNING,"Cannot store complete info in datastore");
 		}
 		
-		// Then send the stocks back to the browser for display
+		// Then send the stocks back to the browser for display with a subset of the fields retrieved from Yahoo
+		
+		int i =0;
+		for (StockInformation stockInfo : datas) {
+			stockInfo.setSymbol(completeInfo[i].getSymbol());
+			stockInfo.setPrice(completeInfo[i].getPrice());
+			stockInfo.setChange(completeInfo[i].getChange());
+			stockInfo.setPercentChange(completeInfo[i].getPercentChange());
+			i++;
+		}
+		
 		return datas;
 	}
 	
@@ -198,7 +216,56 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 			public String toString() {
 				return ("ChangeinPercent");
 			}
-		};
+		},
+		PRICESALES(4) {
+			@Override
+			public String toString() {
+			return ("PriceSales");
+			}
+		},
+		PRICEBOOK(5) {
+			@Override
+			public String toString() {
+			return ("PriceBook");
+			}
+		},
+		EPSESTIMATECURRENTYEAR(6) {
+			@Override
+			public String toString() {
+			return ("EPSEstimateCurrentYear");
+			}
+		},
+		EPSESTIMATENEXTYEAR(7) {
+			@Override
+			public String toString() {
+			return ("EPSEstimateNextYear");
+			}
+		},
+		PRICEEPSESTIMATECURRENTYEAR(8) {
+			@Override
+			public String toString() {
+			return ("PriceEPSEstimateCurrentYear");
+			}
+		},
+		PRICEEPSESTIMATENEXTYEAR(9) {
+			@Override
+			public String toString() {
+			return ("PriceEPSEstimateNextYear");
+			}
+		},
+		PERatio(10) {
+			@Override
+			public String toString() {
+			return ("PERatio");
+			}
+		},
+		PEGRATIO(9) {
+			@Override
+			public String toString() {
+			return ("PEGRatio");
+			}
+		}
+		;
 		
 		private int value;
 		private StockFields (int value) {
@@ -210,48 +277,69 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		}
 	};
 	
-	private StockInformation[] parseYahooResults (JsonParser parser) {
+	private Stock[] parseYahooResults (JsonParser parser) {
 
-		//TODO - Replace all references to JSON fields with an Enum and a loop.
 		
 		count = 0;
 		while (parser.hasNext() ) {
 			JsonParser.Event event = parser.next();
-			while (parser.hasNext() && !(event.equals (JsonParser.Event.KEY_NAME) &&  
-					parser.getString().matches(StockFields.PRICE.toString()))  &&
+			while (parser.hasNext() && 
+					!(event.equals (JsonParser.Event.KEY_NAME) &&  
+						parser.getString().equals(StockFields.PRICE.toString()))  &&
 					!(event.equals (JsonParser.Event.KEY_NAME) && 
-						parser.getString().matches(StockFields.PERCENTCHANGE.toString()))   &&
+						parser.getString().equals(StockFields.PERCENTCHANGE.toString()))   &&
 					!(event.equals(JsonParser.Event.KEY_NAME)  &&  
-						parser.getString().matches(StockFields.CHANGE.toString()))  &&
+						parser.getString().equals(StockFields.CHANGE.toString()))  &&
 					!(event.equals(JsonParser.Event.KEY_NAME)&& 
-							parser.getString().matches(StockFields.SYMBOL.toString())) ) {
+						parser.getString().equals(StockFields.SYMBOL.toString())) &&
+					!(event.equals(JsonParser.Event.KEY_NAME)&&
+						parser.getString().equals(StockFields.PRICESALES.toString())) &&
+					!(event.equals(JsonParser.Event.KEY_NAME)&&
+						parser.getString().equals(StockFields.PRICEBOOK.toString())) &&
+					!(event.equals(JsonParser.Event.KEY_NAME)&&
+						parser.getString().equals(StockFields.EPSESTIMATECURRENTYEAR.toString())) &&
+					!(event.equals(JsonParser.Event.KEY_NAME)&&
+						parser.getString().equals(StockFields.EPSESTIMATENEXTYEAR.toString())) &&							
+					!(event.equals(JsonParser.Event.KEY_NAME)&&
+						parser.getString().equals(StockFields.PRICEEPSESTIMATECURRENTYEAR.toString())) &&
+					!(event.equals(JsonParser.Event.KEY_NAME)&&
+						parser.getString().equals(StockFields.PRICEEPSESTIMATENEXTYEAR.toString())) &&
+					!(event.equals(JsonParser.Event.KEY_NAME)&&
+						parser.getString().equals(StockFields.PERatio.toString())) &&
+					!(event.equals(JsonParser.Event.KEY_NAME)&&
+						parser.getString().equals(StockFields.PEGRATIO.toString())) )
+									
+			    {
 				event = parser.next();
 				}
 			
-				if (event.equals(JsonParser.Event.KEY_NAME )&& parser.getString().matches("symbol"))  {
+			    try {
+				
+
+				if (event.equals(JsonParser.Event.KEY_NAME )&& parser.getString().equals("symbol"))  {
 					parser.next();
 					symbol = parser.getString();
 					if (symbol == null) {
 						symbol = "UNKNOWN";
 					}
-					datas[count].setSymbol(symbol);
+					completeInfo[count].setSymbol(symbol);
 					checkCountIncrement();
 					continue;
 				}
 			
-				if (event.equals(JsonParser.Event.KEY_NAME) && parser.getString().matches("LastTradePriceOnly")) {
+				if (event.equals(JsonParser.Event.KEY_NAME) && parser.getString().equals("LastTradePriceOnly")) {
 					parser.next();
 					sPrice = parser.getString();
 					if (sPrice == null) {
 						sPrice = "0";
 					}
 					price = Double.parseDouble(sPrice);
-					datas[count].setPrice(price);
+					completeInfo[count].setPrice(price);
 					checkCountIncrement();
 					continue;
 				}
 				
-				if (event.equals(JsonParser.Event.KEY_NAME) && parser.getString().matches("ChangeinPercent")) {
+				if (event.equals(JsonParser.Event.KEY_NAME) && parser.getString().equals("ChangeinPercent")) {
 					parser.next();
 					sPercentChange = parser.getString();
 					if (sPercentChange == null) {
@@ -259,27 +347,155 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 					}
 					sPercentChange = sPercentChange.replaceAll("%","");
 					percentChange = Double.parseDouble(sPercentChange);
-					datas[count].setPercentChange(percentChange);
+					completeInfo[count].setPercentChange(percentChange);
 					checkCountIncrement();
 					continue;
 				}
 				
-				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().matches("Change")) {
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("Change")) {
 					parser.next();
 					sChange = parser.getString();
 					if (sChange == null) {
 						sChange = "0";
 					}
 					change = Double.parseDouble(sChange);
-					datas[count].setChange(change);
+					completeInfo[count].setChange(change);
+					checkCountIncrement();
+					continue;
+				}
+				
+			
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("PriceSales")) {
+					parser.next();
+					sPriceSales = parser.getString();
+					if (sPriceSales == null) {
+						sPriceSales = "0";
+					}
+					priceSales = Double.parseDouble(sPriceSales);
+					completeInfo[count].setPriceSales(priceSales);
+					checkCountIncrement();
+					continue;
+				}
+				
+				
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("PriceBook")) {
+					parser.next();
+					sPriceBook = parser.getString();
+					if (sPriceBook == null) {
+						sPriceBook = "0";
+					}
+					priceBook = Double.parseDouble(sPriceBook);
+					completeInfo[count].setPriceBook(priceBook);
+					checkCountIncrement();
+					continue;
+				}
+				
+				
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("EPSEstimateCurrentYear")) {
+					parser.next();
+					sEPSEstimateCurrentYear = parser.getString();
+					if (sEPSEstimateCurrentYear == null) {
+						sEPSEstimateCurrentYear = "0";
+					}
+					EPSEstimateCurrentYear = Double.parseDouble(sEPSEstimateCurrentYear);
+					completeInfo[count].setEPSEstimateCurrentYear(EPSEstimateCurrentYear);
+					checkCountIncrement();
+					continue;
+				}
+				
+				
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("EPSEstimateNextYear")) {
+					parser.next();
+					sEPSEstimateNextYear = parser.getString();
+					if (sEPSEstimateNextYear == null) {
+						sEPSEstimateNextYear = "0";
+					}
+					EPSEstimateNextYear = Double.parseDouble(sEPSEstimateNextYear);
+					completeInfo[count].setEPSEstimateNextYear(EPSEstimateNextYear);
 					checkCountIncrement();
 					continue;
 				}	
+				
+				
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("PriceEPSEstimateCurrentYear")) {
+					parser.next();
+					sPriceEPSEstimateCurrentYear = parser.getString();
+					if (sPriceEPSEstimateCurrentYear == null) {
+						sPriceEPSEstimateCurrentYear = "0";
+					}
+					PriceEPSEstimateCurrentYear = Double.parseDouble(sPriceEPSEstimateCurrentYear);
+					completeInfo[count].setPriceEstimateEPSCurrentYear(PriceEPSEstimateCurrentYear);
+					checkCountIncrement();
+					continue;
+				}	
+				
+				
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("PriceEPSEstimateNextYear")) {
+					parser.next();
+					sPriceEPSEstimateNextYear = parser.getString();
+					if (sPriceEPSEstimateNextYear == null) {
+						sPriceEPSEstimateNextYear = "0";
+					}
+					PriceEPSEstimateNextYear = Double.parseDouble(sPriceEPSEstimateNextYear);
+					completeInfo[count].setPriceEstimateEPSNextYear(PriceEPSEstimateNextYear);
+					checkCountIncrement();
+					continue;
+				}
+				
+				
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("PERatio")) {
+					parser.next();
+					sPERatio = parser.getString();
+					if (sPERatio == null) {
+						sPERatio = "0";
+					}
+					PERatio = Double.parseDouble(sPERatio);
+					completeInfo[count].setPERatio(PERatio);
+					checkCountIncrement();
+					continue;
+				}
+				
+				
+				if (event.equals (JsonParser.Event.KEY_NAME) && parser.getString().equals("PEGRatio")) {
+					parser.next();
+					sPEGRatio = parser.getString();
+					if (sPEGRatio == null) {
+						sPEGRatio = "0";
+					}
+					PEGRatio = Double.parseDouble(sPEGRatio);
+					completeInfo[count].setPEGRatio(PEGRatio);
+					checkCountIncrement();
+					continue;
+				}
+				
+					
+				
+			    } catch (IllegalStateException e) {
+
+			    	/* internalCounter = 0;
+			    	 * completeInfo[count].setSymbol(symbol);
+			    	 * completeInfo[count].setPrice(0);
+			    	 * completeInfo[count].setChange(0);
+			    	 * completeInfo[count].setPercentChange(0);
+			    	 * completeInfo[count].setPriceSales(0);
+			    	 * completeInfo[count].setPriceSales(0);
+			    	 * completeInfo[count].setPriceBook(0);
+			    	 * completeInfo[count].setEPSEstimateCurrentYear(0);
+			    	 * completeInfo[count].setEPSEstimateNextYear(0);
+			    	 * completeInfo[count].setPriceEstimateEPSCurrentYear(0);
+			    	 * completeInfo[count].setPriceEstimateEPSNextYear(0);
+			    	 * completeInfo[count].setPERatio(0);
+			    	 8 completeInfo[count].setPEGRatio(0);
+			    	*/ 
+			    	checkCountIncrement();
+			    	continue;
+			    }
+			
 		}
-		return (datas);
+		return (completeInfo);
 	}
 
-	private void PersistsResultsYahooQuote(StockInformation[] datas) throws NotLoggedInException {
+	private void PersistsResultsYahooQuote(Stock[] completeInfo) throws NotLoggedInException {
 		
 		//Checking if the stock already exists in the datastore
 		UtilityClass.checkLoggedIn();
@@ -291,22 +507,37 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 			q.setOrdering("createDate");
 			List<Stock> stocks = (List<Stock>) q.execute(UtilityClass.getUser());
 			
-			for (StockInformation stockInfo : datas) {
+			//for (Stock stock: stocks) {
+			//	LOG.log(Level.INFO,"list retrieved from Query in PersistsYahooResults :" + stock.getSymbol());
+			//}
+			
+			for (Stock stockInfo : completeInfo) {
 				for (Stock stock : stocks) {
-					// If stock is already in datastore, refresh with updated data
+					// If stock is already in data store, refresh with updated data
 					if (stock.getSymbol().equals(stockInfo.getSymbol())) {
 						stock.setPrice(stockInfo.getPrice());
 						stock.setChange(stockInfo.getChange());
-						stock.setPercentChange(stockInfo.getChangePercent());
+						stock.setPercentChange(stockInfo.getPercentChange());
+						stock.setPriceSales(stockInfo.getPriceSales());
+						stock.setPriceBook(stockInfo.getPriceBook());
+						stock.setEPSEstimateCurrentYear(stockInfo.getEPSEstimateCurrentYear());
+						stock.setEPSEstimateNextYear(stockInfo.getEPSEstimateNextYear());
+						stock.setPriceEstimateEPSCurrentYear(stockInfo.getPriceEstimateEPSCurrentYear());
+						stock.setPriceEstimateEPSNextYear(stockInfo.getPriceEstimateEPSNextYear());
+						stock.setPERatio(stockInfo.getPERatio());
+						stock.setPEGRatio(stockInfo.getPEGRatio());
+						//LOG.log(Level.INFO, "before writing in data store, stock " + stock.getSymbol() + " has PEGRatio of : " + stock.getPEGRatio() + "\n");
+						
+						//Write in datastore
 						pm.makePersistent(stock);
 						break;
 					}
 				}
 				//If we execute this code, then we have a new Stock
-				stockNew = new Stock (UtilityClass.getUser(), stockInfo.getSymbol(),stockInfo.getPrice(), 
-						stockInfo.getChange(),stockInfo.getChangePercent());
+				//stockNew = new Stock (UtilityClass.getUser(), stockInfo.getSymbol(),stockInfo.getPrice(), 
+				//		stockInfo.getChange(),stockInfo.getChangePercent());
 
-				pm.makePersistent(stockNew);
+				//pm.makePersistent(stockNew);
 			} 
 			
 		} finally {
@@ -319,7 +550,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 	 * a field from the JSON. When all fields are read, iterate with next stock symbol.
 	 */
 	private void checkCountIncrement() {
-		if (internalCounter == 3) {
+		if (internalCounter == (StockFields.values().length -1)) {
 			internalCounter=0;
 			count++;
 			return;

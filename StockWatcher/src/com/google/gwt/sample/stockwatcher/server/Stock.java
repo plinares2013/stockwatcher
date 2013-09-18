@@ -28,6 +28,26 @@ public class Stock {
 	private double change;
 	@Persistent
 	private double percentChange;
+	@Persistent
+	private double priceSales;
+	@Persistent
+	private double priceBook;
+	@Persistent
+	private double EPSEstimateCurrentYear;
+	@Persistent
+	private double EPSEstimateNextYear;
+	@Persistent
+	private double PriceEstimateEPSCurrentYear;
+	@Persistent
+	private double PriceEstimateEPSNextYear;
+	@Persistent
+	private double PERatio;
+	@Persistent
+	private double PEGRatio;
+	
+	
+	
+	
 	
 	
 	public Stock() {
@@ -40,13 +60,23 @@ public class Stock {
 		this.symbol = symbol;
 	}
 	
-	public Stock (User user, String symbol, double price, double change, double percentChange) {
+	public Stock (User user, String symbol, double price, double change, double percentChange,
+					double priceSales, double priceBook, double EPSEstimateCurrentYear, double EPSEstimateNextYear,
+					double PriceEstimateEPSCurrentYear, double PriceEstimateEPSNextYear, double PERatio, double PEGRatio) {
 		this();
 		this.user = user;
 		this.symbol = symbol;
 		this.price = price;
 		this.change = change;
 		this.percentChange = percentChange;
+		this.priceSales = priceSales;
+		this.priceBook = priceBook;
+		this.EPSEstimateCurrentYear = EPSEstimateCurrentYear;
+		this.EPSEstimateNextYear = EPSEstimateNextYear;
+		this.PriceEstimateEPSCurrentYear = PriceEstimateEPSCurrentYear;
+		this.PriceEstimateEPSNextYear = PriceEstimateEPSNextYear;
+		this.PERatio = PERatio;
+		this.PEGRatio = PEGRatio;
 	}
 	
 	public Long getId() {
@@ -85,6 +115,10 @@ public class Stock {
 		this.change = change;
 	}
 	
+	public double getChange () {
+		return (change);
+	}
+	
 	public void setPercentChange (double percentChange) {
 		this.percentChange = percentChange;
 	}
@@ -92,4 +126,69 @@ public class Stock {
 	public double getPercentChange () {
 		return this.percentChange;
 	}
+	
+	public void setPriceSales (double priceSales) {
+		this.priceSales = priceSales;
+	}
+	
+	public double getPriceSales () {
+		return this.priceSales;
+	}
+	
+	public void setPriceBook (double priceBook) {
+		this.priceBook = priceBook;
+	}
+	
+	public double getPriceBook () {
+		return this.priceBook;
+	}
+	
+	public void setEPSEstimateCurrentYear (double EPSEstimateCurrentYear) {
+		this.EPSEstimateCurrentYear = EPSEstimateCurrentYear;
+	}
+	
+	public double getEPSEstimateCurrentYear () {
+		return this.EPSEstimateCurrentYear;
+	}
+	
+	public void setEPSEstimateNextYear (double EPSEstimateNextYear) {
+		this.EPSEstimateNextYear = EPSEstimateNextYear;
+	}
+	
+	public double getEPSEstimateNextYear () {
+		return this.EPSEstimateNextYear;
+	}
+	
+	public void setPriceEstimateEPSCurrentYear (double PriceEstimateEPSCurrentYear) {
+		this.PriceEstimateEPSCurrentYear = PriceEstimateEPSCurrentYear;
+	}
+	
+	public double getPriceEstimateEPSCurrentYear () {
+		return this.PriceEstimateEPSCurrentYear;
+	}
+	
+	public void setPriceEstimateEPSNextYear (double PriceEstimateEPSNextYear) {
+		this.PriceEstimateEPSNextYear = PriceEstimateEPSNextYear;
+	}
+	
+	public double getPriceEstimateEPSNextYear () {
+		return this.PriceEstimateEPSNextYear;
+	}
+	
+	public void setPERatio (double PERatio) {
+		this.PERatio = PERatio;
+	}
+	
+	public double getPERatio () {
+		return this.PERatio;
+	}
+	
+	public void setPEGRatio (double PEGRatio) {
+		this.PEGRatio = PEGRatio;
+	}
+	
+	public double getPEGRatio () {
+		return this.PEGRatio;
+	}
+
 }
