@@ -119,11 +119,27 @@ private void loadStockWatcher() {
 	//Offer possibility to logout
 	signOutLink.setHref(loginInfo.getLogoutUrl());
 	
+	//Initialize service on the server
+	StockIndexServiceAsync stockIndexService = GWT.create(StockIndexService.class);
+	
+	stockIndexService.init (new AsyncCallback<Void>() {
+		public void onFailure (Throwable error) {
+			handleError(error);
+		}
+		
+		@Override
+		public void onSuccess(Void ignore) {
+			logger.log(Level.WARNING,"StockIndexService is initialized");
+		}
+	});
+	
 	// Create table for stock data.  
 	stocksFlexTable.setText(0, 0, "Symbol");  
 	stocksFlexTable.setText(0, 1, "Price");  
 	stocksFlexTable.setText(0, 2, "Change");  
 	stocksFlexTable.setText(0, 3, "Remove");
+	stocksFlexTable.setText(0, 4, "Calculate");
+	stocksFlexTable.setText(0, 5, "Calculate Results");
 	
     // Add styles to elements in the stock list table.
     stocksFlexTable.getRowFormatter().addStyleName(0, "watchListHeader");
@@ -131,12 +147,14 @@ private void loadStockWatcher() {
     stocksFlexTable.getCellFormatter().addStyleName(0, 1, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(0, 2, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(0, 3, "watchListRemoveColumn");
+    stocksFlexTable.getCellFormatter().addStyleName(0, 4, "watchListCalculateColumn");
+    stocksFlexTable.getCellFormatter().addStyleName(0, 5, "watchListCalculateResultsColumn");
     
 	 // Assemble Add Stock panel.
     addPanel.add(newSymbolTextBox);
     addPanel.add(addStockButton);
     addPanel.addStyleName("addPanel");
-    addPanel.addStyleName("addPanel");
+    //addPanel.addStyleName("addPanel");
     
     errorMsgLabel.setStyleName("errorMessage"); 
     errorMsgLabel.setVisible(false);
@@ -145,7 +163,6 @@ private void loadStockWatcher() {
     mainPanel.add(errorMsgLabel);
  	mainPanel.add(signOutLink);
     mainPanel.add(stocksFlexTable);
-    //stocksFlexTable.setSize("283px", "58px");
     mainPanel.add(addPanel);
     mainPanel.add(lastUpdatedLabel);
     lastUpdatedLabel.setHeight("33px");
@@ -236,6 +253,8 @@ public void displayStock (final String symbol) {
     int row = stocksFlexTable.getRowCount();
     stocks.add(symbol);
     stocksFlexTable.setText(row, 0, symbol);
+    
+    stocksFlexTable.setWidget(row, 2, new Label());
 
     // Add a button to remove this stock from the table.
     Button removeStockButton = new Button("x");
@@ -248,15 +267,56 @@ public void displayStock (final String symbol) {
       }
     });
     stocksFlexTable.setWidget(row, 3, removeStockButton);
-    stocksFlexTable.setWidget(row, 2, new Label());
+    
+    //Add a button to calculate the worthiness value associated  to the stock
+    Button calculateStockWorthButton = new Button("Calc");
+    calculateStockWorthButton.addClickHandler(new ClickHandler() {
+    	public void onClick (ClickEvent event) {
+    		calculateStockIndex(symbol);
+    	}	
+    });
+    stocksFlexTable.setWidget(row, 4, calculateStockWorthButton);
     
     stocksFlexTable.getCellFormatter().addStyleName(row, 1, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(row, 2, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(row, 3, "watchListRemoveColumn");
     removeStockButton.addStyleDependentName("remove");
-
+    stocksFlexTable.getCellFormatter().addStyleName(row, 4, "watchListRemoveColumn");
+    calculateStockWorthButton.addStyleDependentName("worthindex");
+    stocksFlexTable.getCellFormatter().addStyleName(row, 5, "watchListCalculateResultsColumn");
     //Get the stock price.
     refreshWatchList();	
+}
+
+protected void calculateStockIndex(final String symbol) {
+	
+	StockIndexServiceAsync stockIndexService = GWT.create(StockIndexService.class);
+	
+	stockIndexService.calculateWorth (symbol, new AsyncCallback<String>() {
+		public void onFailure (Throwable error) {
+			handleError(error);
+		}
+		
+		@Override
+		public void onSuccess(String worth) {
+			displayStockIndex(symbol, worth);
+		}
+	});
+}
+
+protected void displayStockIndex(String symbol, String worth) {
+	//Identify the row in the table associated to the symbol
+	int row = 0;
+	for (String str : stocks) {
+		if (str.equals(symbol)) {
+			break;
+		}
+		row++;	
+	}
+	
+	//  Write the stock worth index in the main StockFlex table
+    stocksFlexTable.setText(row+1 , 5, worth);
+    
 }
 
 /**

@@ -43,6 +43,22 @@ body {
   text-align: center;
 }
 
+/* stock list Remove column */
+.watchListRemoveColumn {
+  text-align: center;
+}
+/* stock list Calculate column */
+.watchListCalculateColumn {
+  text-align: center;
+}
+
+/* stock list CalculateResults column */
+.watchListCalculateResultsColumn {
+  text-align: center;
+}
+
+
+
 /* Add Stock panel */
 .addPanel {
   margin: 10px 0px 15px 0px;
@@ -50,6 +66,11 @@ body {
 
 /* stock list, the Remove button */
 .gwt-Button-remove {
+  width: 50px;
+}
+
+/* stock list, the Calculate button */
+.gwt-Button-worthindex {
   width: 50px;
 }
 

@@ -33,7 +33,7 @@ public class Stock {
 	@Persistent
 	private double priceBook;
 	@Persistent
-	private double EPSEstimateCurrentYear;
+	private double oneYearEPS;
 	@Persistent
 	private double EPSEstimateNextYear;
 	@Persistent
@@ -45,9 +45,22 @@ public class Stock {
 	@Persistent
 	private double PEGRatio;
 	
-	
-	
-	
+	@Persistent
+	private double ProfitMargin;
+	@Persistent
+	private double ROA;
+	@Persistent
+	private double ROE;
+	@Persistent
+	private double DebtEquity;
+	@Persistent
+	private double Current;
+	@Persistent
+	private double ManagementOwnership;
+	@Persistent
+	private double EPSEstimateNextQuarter;
+	@Persistent
+	private double quarterlyEPS;
 	
 	
 	public Stock() {
@@ -61,8 +74,9 @@ public class Stock {
 	}
 	
 	public Stock (User user, String symbol, double price, double change, double percentChange,
-					double priceSales, double priceBook, double EPSEstimateCurrentYear, double EPSEstimateNextYear,
-					double PriceEstimateEPSCurrentYear, double PriceEstimateEPSNextYear, double PERatio, double PEGRatio) {
+					double priceSales, double priceBook, double oneYearEPS, double EPSEstimateNextYear,
+					double PriceEstimateEPSCurrentYear, double PriceEstimateEPSNextYear, double PERatio, 
+					double PEGRatio, double quarterlyEPS) {
 		this();
 		this.user = user;
 		this.symbol = symbol;
@@ -71,12 +85,13 @@ public class Stock {
 		this.percentChange = percentChange;
 		this.priceSales = priceSales;
 		this.priceBook = priceBook;
-		this.EPSEstimateCurrentYear = EPSEstimateCurrentYear;
+		this.oneYearEPS = oneYearEPS;
 		this.EPSEstimateNextYear = EPSEstimateNextYear;
 		this.PriceEstimateEPSCurrentYear = PriceEstimateEPSCurrentYear;
 		this.PriceEstimateEPSNextYear = PriceEstimateEPSNextYear;
 		this.PERatio = PERatio;
 		this.PEGRatio = PEGRatio;
+		this.quarterlyEPS = quarterlyEPS;
 	}
 	
 	public Long getId() {
@@ -143,14 +158,6 @@ public class Stock {
 		return this.priceBook;
 	}
 	
-	public void setEPSEstimateCurrentYear (double EPSEstimateCurrentYear) {
-		this.EPSEstimateCurrentYear = EPSEstimateCurrentYear;
-	}
-	
-	public double getEPSEstimateCurrentYear () {
-		return this.EPSEstimateCurrentYear;
-	}
-	
 	public void setEPSEstimateNextYear (double EPSEstimateNextYear) {
 		this.EPSEstimateNextYear = EPSEstimateNextYear;
 	}
@@ -189,6 +196,78 @@ public class Stock {
 	
 	public double getPEGRatio () {
 		return this.PEGRatio;
+	}
+
+	public double getProfitMargin() {
+		return ProfitMargin;
+	}
+
+	public void setProfitMargin(double profitMargin) {
+		ProfitMargin = profitMargin;
+	}
+
+	public double getEPSEstimateNextQuarter() {
+		return EPSEstimateNextQuarter;
+	}
+
+	public void setEPSEstimateNextQuarter(double ePSEstimateNextQuarter) {
+		EPSEstimateNextQuarter = ePSEstimateNextQuarter;
+	}
+
+	public double getROA() {
+		return ROA;
+	}
+
+	public void setROA(double rOA) {
+		ROA = rOA;
+	}
+
+	public double getROE() {
+		return ROE;
+	}
+
+	public void setROE(double rOE) {
+		ROE = rOE;
+	}
+
+	public double getDebtEquity() {
+		return DebtEquity;
+	}
+
+	public void setDebtEquity(double debtEquity) {
+		DebtEquity = debtEquity;
+	}
+
+	public double getCurrent() {
+		return Current;
+	}
+
+	public void setCurrent(double current) {
+		Current = current;
+	}
+
+	public double getManagementOwnership() {
+		return ManagementOwnership;
+	}
+
+	public void setManagementOwnership(double managementOwnership) {
+		ManagementOwnership = managementOwnership;
+	}
+
+	public double getOneYearEPS() {
+		return oneYearEPS;
+	}
+
+	public void setOneYearEPS(double oneYearEPS) {
+		this.oneYearEPS = oneYearEPS;
+	}
+
+	public double getQuarterlyEPS() {
+		return quarterlyEPS;
+	}
+
+	public void setQuarterlyEPS(double quarterlyEPS) {
+		this.quarterlyEPS = quarterlyEPS;
 	}
 
 }

@@ -51,33 +51,42 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		YahooQuoteService {
 	
 	private static final Logger LOG = Logger.getLogger(StockServiceImpl.class.getName());
+	
 	private static final String YAHOO_URL = "http://query.yahooapis.com/v1/public/yql?q=select symbol, Change, EPSEstimateCurrentYear, " +
 			"EPSEstimateNextYear, LastTradePriceOnly, ChangeinPercent, PriceSales, PriceBook, PERatio, PEGRatio, PriceEPSEstimateCurrentYear," +
 			"PriceEPSEstimateNextYear from yahoo.finance.quotes where symbol in (";
 	
+	private static final String YAHOO_URL_KEYSTATS = "http://query.yahooapis.com/v1/public/yql?q=select symbol, ProfitMargin, ReturnonAssets, ReturnonEquity," +
+			"TotalDebtEquity, CurrentRatio, PercentageHeldbyInsiders  from yahoo.finance.keystats where symbol in (";
+	
 	private static Logger logger = Logger.getLogger("Client Logger");
+	
 	String sPrice = "", sChange = "", sPercentChange = "", symbol="";
 	String sPriceSales = "", sPriceBook = "", sEPSEstimateCurrentYear = "", sEPSEstimateNextYear = "";
 	String sPriceEPSEstimateCurrentYear = "", sPriceEPSEstimateNextYear = "", sPERatio = "", sPEGRatio = "";
+	String sProfitMargin = "", sReturnonAssets ="", sReturnonEquity = "", sTotalDebtEquity = "", sCurrentRatio ="", sPercentageHeldbyInsiders = "";
 	Stock stockNew;
 	double price = 0, change = 0, percentChange = 0, priceSales =0, priceBook = 0, PERatio = 0, PEGRatio = 0;
 	double EPSEstimateCurrentYear = 0, EPSEstimateNextYear = 0, PriceEPSEstimateCurrentYear = 0, PriceEPSEstimateNextYear = 0;
+	double profitMargin = 0, returnonAssets = 0, returnonEquity = 0, totalDebtEquity = 0, currentRatio = 0, percentageHeldbyInsiders = 0;
 	StockInformation[] datas;
-	Stock[] completeInfo;
-	private int count = 0;
-	private int internalCounter=0;
+	Stock[] completeInfo, completeInfoKeystats;
+	private int count = 0, countKeystats = 0;
+	private int internalCounter=0, internalCounterKeystats=0;
 
 	
 	public StockInformation[] getStockInformation (String[] symbols)  {
 		
-		String url="";
+		String url="", url_keystats = "";
 		String query = "";
 		
 		datas = new StockInformation[symbols.length];
 		completeInfo = new Stock[symbols.length];
+		completeInfoKeystats = new Stock[symbols.length];
 		for (int i=0; i<symbols.length; i++) {
 			datas[i] = new StockInformation();
 			completeInfo[i] = new Stock();
+			completeInfoKeystats[i] = new Stock();
 		}
 	
 /*
@@ -89,7 +98,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 			logger.log(Level.WARNING,"Encoding error in getStockInformation(String symbol)");
 		}
 */	
-
+		// Prepare URL to call yahoo.finance.quotes
 			url = YAHOO_URL;
 			List<String> lSymbols = Arrays.asList(symbols);
 			Iterator<String> iter = lSymbols.iterator();
@@ -108,6 +117,25 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 				 logger.log(Level.WARNING,"url for yahoo quote incorrect");
 			 }
 
+
+			//Prepare URL to call yahoo.finance.keystats
+			 
+				url_keystats = YAHOO_URL_KEYSTATS;
+				iter = lSymbols.iterator();
+				while (iter.hasNext()) {
+					  url_keystats += "\"" + iter.next() + "\"";
+					  if (iter.hasNext()) {
+					    url_keystats += ",";
+					  } else {
+					    url_keystats += ")&format=json&env=store://datatables.org/alltableswithkeys";
+					  }
+					}
+
+				 try{
+					url_keystats = MyURLEncode.URLencoding(url_keystats,"UTF-8"); 
+				 } catch (Exception e) {
+					 logger.log(Level.WARNING,"url for yahoo quote incorrect");
+				 }
 
 		
 /*
@@ -149,7 +177,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 
 
 /*
- *      Using Jersey 2.x with AppEngine
+ *      Using Jersey 2.x with AppEngine, contact Yahoo JSON API yahoo.finance.quotes
  */     
  		Client client =  ClientBuilder.newClient();
  
@@ -169,11 +197,26 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		//Parse all information
 		completeInfo = parseYahooResults (parser);
 		
-//     
+/*
+ *     Contact another JSON API yahoo.finance.keystats to retrieve additional stock data
+ */	
+		target = client.target(url_keystats);
+		
+		invocation = target.request().buildGet();
+		response = invocation.invoke();
+		
+// 		TODO Check the status of the response
+//		Assert.assertTrue (response.getStatusInfo() == Response.Status.OK);
+		query = response.readEntity (String.class);
+		reader = new StringReader (query);
+		parser = Json.createParser(reader);
+
+		//Parse all information
+		completeInfoKeystats = parseYahooKeystatsResults(parser);
 		
 		//Make freshly retrieved data persistent in database
 		try {
-			PersistsResultsYahooQuote (completeInfo);
+			PersistsResultsYahooQuote (completeInfo, completeInfoKeystats);
 		} catch (NotLoggedInException e ){
 			LOG.log(Level.WARNING,"Cannot store complete info in datastore");
 		}
@@ -191,7 +234,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		
 		return datas;
 	}
-	
+
 	private enum StockFields {
 		SYMBOL(0) {
 			@Override
@@ -253,7 +296,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 			return ("PriceEPSEstimateNextYear");
 			}
 		},
-		PERatio(10) {
+		PERATIO(10) {
 			@Override
 			public String toString() {
 			return ("PERatio");
@@ -264,8 +307,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 			public String toString() {
 			return ("PEGRatio");
 			}
-		}
-		;
+		};
 		
 		private int value;
 		private StockFields (int value) {
@@ -277,10 +319,64 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		}
 	};
 	
+	private enum StockFieldsKeystats {
+		SYMBOL(0) {
+			@Override
+			public String toString() {
+				return ("symbol");
+			}	
+		},
+		PROFITMARGIN(1) {
+			@Override
+			public String toString() {
+				return ("ProfitMargin");
+			}
+		},
+		RETURNONASSETS(2) {
+			@Override 
+			public String toString() {
+				return ("ReturnonAssets");
+			}
+		},
+		RETURNONEQUITY(3) {
+			@Override
+			public String toString() {
+				return ("ReturnonEquity");
+			}
+		},
+		TOTALDEBTEQUITY(4) {
+			@Override
+			public String toString() {
+			return ("TotalDebtEquity");
+			}
+		},
+		CURRENTRATIO(5) {
+			@Override
+			public String toString() {
+			return ("CurrentRatio");
+			}
+		},
+		PERCENTAGEHELDBYINSIDERS(6) {
+			@Override
+			public String toString() {
+			return ("PercentageHeldbyInsiders");
+			}
+		};
+		
+		private int value;
+		private StockFieldsKeystats (int value) {
+			this.value = value;
+		}
+		
+		private int getValue() {
+			return (this.value);
+		}
+	};
+	
 	private Stock[] parseYahooResults (JsonParser parser) {
 
-		
 		count = 0;
+		internalCounter =0;
 		while (parser.hasNext() ) {
 			JsonParser.Event event = parser.next();
 			while (parser.hasNext() && 
@@ -305,7 +401,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 					!(event.equals(JsonParser.Event.KEY_NAME)&&
 						parser.getString().equals(StockFields.PRICEEPSESTIMATENEXTYEAR.toString())) &&
 					!(event.equals(JsonParser.Event.KEY_NAME)&&
-						parser.getString().equals(StockFields.PERatio.toString())) &&
+						parser.getString().equals(StockFields.PERATIO.toString())) &&
 					!(event.equals(JsonParser.Event.KEY_NAME)&&
 						parser.getString().equals(StockFields.PEGRATIO.toString())) )
 									
@@ -398,7 +494,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 						sEPSEstimateCurrentYear = "0";
 					}
 					EPSEstimateCurrentYear = Double.parseDouble(sEPSEstimateCurrentYear);
-					completeInfo[count].setEPSEstimateCurrentYear(EPSEstimateCurrentYear);
+					completeInfo[count].setOneYearEPS(EPSEstimateCurrentYear);
 					checkCountIncrement();
 					continue;
 				}
@@ -471,22 +567,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 					
 				
 			    } catch (IllegalStateException e) {
-
-			    	/* internalCounter = 0;
-			    	 * completeInfo[count].setSymbol(symbol);
-			    	 * completeInfo[count].setPrice(0);
-			    	 * completeInfo[count].setChange(0);
-			    	 * completeInfo[count].setPercentChange(0);
-			    	 * completeInfo[count].setPriceSales(0);
-			    	 * completeInfo[count].setPriceSales(0);
-			    	 * completeInfo[count].setPriceBook(0);
-			    	 * completeInfo[count].setEPSEstimateCurrentYear(0);
-			    	 * completeInfo[count].setEPSEstimateNextYear(0);
-			    	 * completeInfo[count].setPriceEstimateEPSCurrentYear(0);
-			    	 * completeInfo[count].setPriceEstimateEPSNextYear(0);
-			    	 * completeInfo[count].setPERatio(0);
-			    	 8 completeInfo[count].setPEGRatio(0);
-			    	*/ 
+			    	//Simply increment the count
 			    	checkCountIncrement();
 			    	continue;
 			    }
@@ -494,8 +575,157 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		}
 		return (completeInfo);
 	}
+	
+	
+	private Stock[] parseYahooKeystatsResults(JsonParser parser) {
+		//TODO : when symbols do not exist (e.g. OOOO), the JSON response from Yahoo is completely different
+		//   and the parsing is incorrect. It creates a NullPointerException in PersistsResultsYahooQuote() method.
+		countKeystats = 0;
+		internalCounterKeystats =0;
+		while (parser.hasNext() ) {
+			JsonParser.Event event = parser.next();
+			while (parser.hasNext() && 
+					!(event.equals (JsonParser.Event.KEY_NAME) &&  
+						parser.getString().equals(StockFieldsKeystats.SYMBOL.toString()))  &&
+					!(event.equals (JsonParser.Event.KEY_NAME) && 
+						parser.getString().equals(StockFieldsKeystats.PROFITMARGIN.toString())) &&
+					!(event.equals (JsonParser.Event.KEY_NAME) && 
+						parser.getString().equals(StockFieldsKeystats.RETURNONASSETS.toString())) &&
+					!(event.equals (JsonParser.Event.KEY_NAME) && 
+						parser.getString().equals(StockFieldsKeystats.RETURNONEQUITY.toString())) &&
+					!(event.equals (JsonParser.Event.KEY_NAME) && 
+						parser.getString().equals(StockFieldsKeystats.TOTALDEBTEQUITY.toString())) &&
+					!(event.equals (JsonParser.Event.KEY_NAME) && 
+						parser.getString().equals(StockFieldsKeystats.CURRENTRATIO.toString())) &&
+					!(event.equals (JsonParser.Event.KEY_NAME) && 
+						parser.getString().equals(StockFieldsKeystats.PERCENTAGEHELDBYINSIDERS.toString())) &&
+					!(event.equals (JsonParser.Event.KEY_NAME) && 
+						parser.getString().equals(StockFieldsKeystats.PROFITMARGIN.toString()))    )
+									
+			    {
+				event = parser.next();
+				}
+			
+			try {
+			
+			if (event.equals(JsonParser.Event.KEY_NAME )&& parser.getString().equals("symbol"))  {
+				parser.next();
+				symbol = parser.getString();
+				if (symbol == null) {
+					symbol = "UNKNOWN";
+				}
+				completeInfoKeystats[countKeystats].setSymbol(symbol);
+				checkCountIncrementKeystats();
+				continue;
+			}
+			
+			if (event.equals(JsonParser.Event.KEY_NAME )&& parser.getString().equals("ProfitMargin")) {
+				for (int  i = 1 ; i < 6 ; i++ ) {
+					event = parser.next();
+				}
+				
+				if (event.equals (JsonParser.Event.VALUE_STRING)) {
+					if (((sProfitMargin = parser.getString()) == null) ||
+							((sProfitMargin = parser.getString()).equals("N/A"))) {
+						sProfitMargin = "0";
+					}
+					sProfitMargin = sProfitMargin.replaceAll("%","");
+					profitMargin = Double.parseDouble(sProfitMargin);
+					completeInfoKeystats[countKeystats].setProfitMargin(profitMargin);
+					checkCountIncrementKeystats();
+				}
+			}
+			
+			if (event.equals(JsonParser.Event.KEY_NAME)&& parser.getString().equals("ReturnonAssets")) {
+				for (int  i = 1 ; i < 6 ; i++ ) {
+					event = parser.next();
+				}
+				if (event.equals (JsonParser.Event.VALUE_STRING)) {
+					if (((sReturnonAssets = parser.getString()) == null) ||
+							((sReturnonAssets = parser.getString()).equals("N/A"))) {
+						sReturnonAssets = "0";
+					}
+					sReturnonAssets = sReturnonAssets.replaceAll("%","");
+					returnonAssets = Double.parseDouble(sReturnonAssets);
+					completeInfoKeystats[countKeystats].setROA(returnonAssets);
+					checkCountIncrementKeystats();
+				}
+			}
+				
+			if (event.equals(JsonParser.Event.KEY_NAME)&& parser.getString().equals("ReturnonEquity")) {
+				for (int  i = 1 ; i < 6 ; i++ ) {
+					event = parser.next();
+				}
+				
+				if (event.equals (JsonParser.Event.VALUE_STRING)) {
+					if (((sReturnonEquity = parser.getString()) == null) ||
+							((sReturnonEquity = parser.getString()).equals("N/A"))){
+						sReturnonEquity = "0";
+					}
+					sReturnonEquity = sReturnonEquity.replaceAll("%","");
+					returnonEquity = Double.parseDouble(sReturnonEquity);
+					completeInfoKeystats[countKeystats].setROE(returnonEquity);
+					checkCountIncrementKeystats();
+				}
+			}
+			
+			if (event.equals(JsonParser.Event.KEY_NAME)&& parser.getString().equals("TotalDebtEquity")) {
+				for (int  i = 1 ; i < 6 ; i++ ) {
+					event = parser.next();
+				}
+				
+				if (event.equals (JsonParser.Event.VALUE_STRING)) {
+					if (((sTotalDebtEquity = parser.getString()) == null) || 
+					       ((sTotalDebtEquity = parser.getString()).equals("N/A")))  {
+						sTotalDebtEquity = "0";
+					}
+					totalDebtEquity = Double.parseDouble(sTotalDebtEquity);
+					completeInfoKeystats[countKeystats].setDebtEquity(totalDebtEquity);
+					checkCountIncrementKeystats();
+				}
+			}
+			
+			if (event.equals(JsonParser.Event.KEY_NAME)&& parser.getString().equals("CurrentRatio")) {
+				for (int  i = 1 ; i < 6 ; i++ ) {
+					event = parser.next();
+				}
+				
+				
+				if (event.equals (JsonParser.Event.VALUE_STRING)) {
+					if (((sCurrentRatio = parser.getString()) == null) ||
+							((sCurrentRatio = parser.getString()).equals("N/A"))) {
+						sCurrentRatio = "0";
+					}
+					currentRatio = Double.parseDouble(sCurrentRatio);
+					completeInfoKeystats[countKeystats].setCurrent(currentRatio);
+					checkCountIncrementKeystats();
+				}
+			}
+			
+			if (event.equals(JsonParser.Event.KEY_NAME)&& parser.getString().equals("PercentageHeldbyInsiders")) {	
+				event = parser.next();
+				if (event.equals (JsonParser.Event.VALUE_STRING)) {
+					if (((sPercentageHeldbyInsiders = parser.getString()) == null) ||
+							((sPercentageHeldbyInsiders = parser.getString()).equals("N/A"))) {
+						sPercentageHeldbyInsiders = "0";
+					}
+					sPercentageHeldbyInsiders = sPercentageHeldbyInsiders.replaceAll("%","");
+					percentageHeldbyInsiders = Double.parseDouble(sPercentageHeldbyInsiders);
+					completeInfoKeystats[countKeystats].setManagementOwnership(percentageHeldbyInsiders);
+					checkCountIncrementKeystats();
+				}
+			}
+				
+			}	catch (IllegalStateException e) {
+				//Simply increment the count
+		    	checkCountIncrementKeystats();
+		    	continue;
+			}
+		}
+		return (completeInfoKeystats);
+	}
 
-	private void PersistsResultsYahooQuote(Stock[] completeInfo) throws NotLoggedInException {
+	private void PersistsResultsYahooQuote(Stock[] completeInfo, Stock[] completeInfoKeystats) throws NotLoggedInException {
 		
 		//Checking if the stock already exists in the datastore
 		UtilityClass.checkLoggedIn();
@@ -511,34 +741,44 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 			//	LOG.log(Level.INFO,"list retrieved from Query in PersistsYahooResults :" + stock.getSymbol());
 			//}
 			
-			for (Stock stockInfo : completeInfo) {
-				for (Stock stock : stocks) {
-					// If stock is already in data store, refresh with updated data
-					if (stock.getSymbol().equals(stockInfo.getSymbol())) {
+			for (Stock stock : stocks) {
+				for (Stock stockInfo : completeInfo) {
+					// stock in data store, refresh with updated data
+					if (stockInfo.getSymbol().equals(stock.getSymbol())) {
 						stock.setPrice(stockInfo.getPrice());
 						stock.setChange(stockInfo.getChange());
 						stock.setPercentChange(stockInfo.getPercentChange());
 						stock.setPriceSales(stockInfo.getPriceSales());
 						stock.setPriceBook(stockInfo.getPriceBook());
-						stock.setEPSEstimateCurrentYear(stockInfo.getEPSEstimateCurrentYear());
+						stock.setOneYearEPS(stockInfo.getOneYearEPS());
 						stock.setEPSEstimateNextYear(stockInfo.getEPSEstimateNextYear());
 						stock.setPriceEstimateEPSCurrentYear(stockInfo.getPriceEstimateEPSCurrentYear());
 						stock.setPriceEstimateEPSNextYear(stockInfo.getPriceEstimateEPSNextYear());
 						stock.setPERatio(stockInfo.getPERatio());
 						stock.setPEGRatio(stockInfo.getPEGRatio());
+						break;
+					}
+				}
+				for (Stock keystatsInfo : completeInfoKeystats) {
+					// stock in data store, refresh with updated data
+					if (keystatsInfo.getSymbol().equals(stock.getSymbol())) {
+						stock.setProfitMargin(keystatsInfo.getProfitMargin());
+						stock.setROA(keystatsInfo.getROA());
+						stock.setROE(keystatsInfo.getROE());
+						stock.setDebtEquity(keystatsInfo.getDebtEquity());
+						stock.setCurrent(keystatsInfo.getCurrent());
+						stock.setManagementOwnership(keystatsInfo.getManagementOwnership());
+						break;
+					}
+				}
+						
+							
 						//LOG.log(Level.INFO, "before writing in data store, stock " + stock.getSymbol() + " has PEGRatio of : " + stock.getPEGRatio() + "\n");
 						
 						//Write in datastore
 						pm.makePersistent(stock);
-						break;
 					}
-				}
-				//If we execute this code, then we have a new Stock
-				//stockNew = new Stock (UtilityClass.getUser(), stockInfo.getSymbol(),stockInfo.getPrice(), 
-				//		stockInfo.getChange(),stockInfo.getChangePercent());
 
-				//pm.makePersistent(stockNew);
-			} 
 			
 		} finally {
 			pm.close();
@@ -557,7 +797,15 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		}
 		internalCounter++;
 		}
-		
+	
+	private void checkCountIncrementKeystats() {
+		if (internalCounterKeystats == (StockFieldsKeystats.values().length -1)) {
+			internalCounterKeystats =0;
+			countKeystats++;
+			return;
+		}
+		internalCounterKeystats++;
+	}
 
 	private void searchResults(JsonReader reader) {
 		try{
