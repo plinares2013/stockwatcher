@@ -57,7 +57,7 @@ import com.google.gwt.user.client.ui.HasVerticalAlignment;
  */
 public class StockWatcher implements EntryPoint {
 
-private static final int REFRESH_INTERVAL = 5000; // ms	
+private static final int REFRESH_INTERVAL = 10000; // ms	
 private VerticalPanel mainPanel = new VerticalPanel();  
 private FlexTable stocksFlexTable = new FlexTable();  
 private HorizontalPanel addPanel = new HorizontalPanel();  

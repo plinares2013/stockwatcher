@@ -1,13 +1,16 @@
 package com.google.gwt.sample.stockwatcher.server;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLEncoder;
 
 import java.util.Arrays;
@@ -27,6 +30,10 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.mortbay.util.UrlEncoded;
 
 
@@ -59,6 +66,8 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 	private static final String YAHOO_URL_KEYSTATS = "http://query.yahooapis.com/v1/public/yql?q=select symbol, ProfitMargin, ReturnonAssets, ReturnonEquity," +
 			"TotalDebtEquity, CurrentRatio, PercentageHeldbyInsiders  from yahoo.finance.keystats where symbol in (";
 	
+	private static final String BW_URL = "http://investing.businessweek.com/research/stocks/financials/ratios.asp?ticker=";
+	
 	private static Logger logger = Logger.getLogger("Client Logger");
 	
 	String sPrice = "", sChange = "", sPercentChange = "", symbol="";
@@ -70,7 +79,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 	double EPSEstimateCurrentYear = 0, EPSEstimateNextYear = 0, PriceEPSEstimateCurrentYear = 0, PriceEPSEstimateNextYear = 0;
 	double profitMargin = 0, returnonAssets = 0, returnonEquity = 0, totalDebtEquity = 0, currentRatio = 0, percentageHeldbyInsiders = 0;
 	StockInformation[] datas;
-	Stock[] completeInfo, completeInfoKeystats;
+	Stock[] completeInfo, completeInfoKeystats, bwInfo;
 	private int count = 0, countKeystats = 0;
 	private int internalCounter=0, internalCounterKeystats=0;
 
@@ -79,25 +88,20 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		
 		String url="", url_keystats = "";
 		String query = "";
+		double quickRatio = 0;
+		int j = 0;
 		
 		datas = new StockInformation[symbols.length];
 		completeInfo = new Stock[symbols.length];
 		completeInfoKeystats = new Stock[symbols.length];
+		bwInfo = new Stock[symbols.length];
 		for (int i=0; i<symbols.length; i++) {
 			datas[i] = new StockInformation();
 			completeInfo[i] = new Stock();
 			completeInfoKeystats[i] = new Stock();
+			bwInfo[i] = new Stock();
 		}
-	
-/*
- * 		try {
- 
-			url = YAHOO_URL + MyURLEncode.URLencoding("select symbol, ChangeinPercent, LastTradePriceOnly, Change from yahoo.finance.quotes where symbol in (", "UTF-8") +
-					MyURLEncode.URLencoding("\"" + symbol + "\")", "UTF-8") + "&format=json&env=store://datatables.org/alltableswithkeys";
-		}  catch (UnsupportedEncodingException e) {
-			logger.log(Level.WARNING,"Encoding error in getStockInformation(String symbol)");
-		}
-*/	
+		
 		// Prepare URL to call yahoo.finance.quotes
 			url = YAHOO_URL;
 			List<String> lSymbols = Arrays.asList(symbols);
@@ -136,44 +140,6 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 				 } catch (Exception e) {
 					 logger.log(Level.WARNING,"url for yahoo quote incorrect");
 				 }
-
-		
-/*
- * 
-		//Using App Engine URLFeth and Gson to parse JSON -- Painful
-		try {
-			URL yahooUrl = new URL (url);
-			HTTPRequest request = new HTTPRequest(yahooUrl);
-			URLFetchService service = URLFetchServiceFactory.getURLFetchService();
-			HTTPResponse response = service.fetch(request);
-			byte[] contents = response.getContent();
-			query = new String(contents);
-			
-		} catch (Exception e) {
-			logger.log(Level.WARNING,"TBD");
-		}
-			
- 			try {	
-			URL yahooUrl = new URL (url);
-			InputStream is = yahooUrl.openStream();
-			InputStreamReader isr = new InputStreamReader(is,"UTF-8");
-			JsonReader reader = new JsonReader(isr);
-			reader.beginObject();
-			while (reader.hasNext()) {
-				String name = reader.nextName();
-				if (name.equals("query")) {
-					searchResults(reader);
-				} else {
-					reader.skipValue();
-				}
-			}
-			reader.endObject();
-			reader.close();
-		} catch (Exception e) {
-			logger.log(Level.WARNING,"Exception with Yahoo URL Json retrieval \n");
-		}
-	
-*/ 
 
 
 /*
@@ -214,9 +180,20 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		//Parse all information
 		completeInfoKeystats = parseYahooKeystatsResults(parser);
 		
+		// Contact the Business Week site to get extra info per stock (Jsoup is used)
+		j=0;
+		iter = lSymbols.iterator();
+		while (iter.hasNext()) {
+			String symb = iter.next();
+			quickRatio = scrapeBwData("http://investing.businessweek.com/research/stocks/financials/ratios.asp?ticker=" + symbol);
+			bwInfo[j].setSymbol(symb);
+			bwInfo[j].setQuickRatio(quickRatio);
+			j++;
+		}
+	    
 		//Make freshly retrieved data persistent in database
 		try {
-			PersistsResultsYahooQuote (completeInfo, completeInfoKeystats);
+			PersistsResultsYahooQuote (completeInfo, completeInfoKeystats, bwInfo);
 		} catch (NotLoggedInException e ){
 			LOG.log(Level.WARNING,"Cannot store complete info in datastore");
 		}
@@ -233,6 +210,77 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		}
 		
 		return datas;
+	}
+
+	private double scrapeBwData(String url) {
+		int index =0;
+		Elements floatR;
+		Element div;
+		String sQuickRatio = "";
+		double quickRatio = 0;
+	    String html = getUrl(url);
+	    if (html.equals("Error connecting to the URL")) {
+	    	return (0);
+	    }
+	    Document doc = Jsoup.parse(html);
+	    //If symbol does not exist return 0
+	    Elements errorList= doc.getElementsMatchingOwnText("No matches found");
+	    if (!errorList.isEmpty()) {
+	    	return (0);
+	    }
+	    //Fetch the data when symbol exists
+	    Elements ratioTable = doc.getElementsByClass("ratioTable");
+	    outerloop:
+	    for (Element table: ratioTable) {
+	    	Elements rowList = table.getElementsByTag("tr");
+	    	for (Element row: rowList) {
+	    		Elements floatList = row.getElementsByClass("floatL");
+	    		for (Element bold: floatList) {
+	    			Elements boldList = bold.getElementsByClass("bold");
+	    			index = 0;
+	    			for (Element item: boldList) {
+	    				index++;
+	    				if (item.html().equals("Quick Ratio")) {
+	    					floatR = row.getElementsByClass("floatR");
+	    					div = floatR.get(index).child(0);
+	    					sQuickRatio = div.html();
+	    					break outerloop;
+	    				}
+	    			}
+	    		}
+	    	}
+	    }
+	    //System.out.println("File has been read and value for quickRation is " + sQuickRatio);
+	    sQuickRatio = sQuickRatio.replace('x',' ');
+	    quickRatio = Double.parseDouble(sQuickRatio);
+	    return quickRatio;
+	}
+
+	private String getUrl(String url) {
+	    URL urlObj = null;
+	    try{
+	      urlObj = new URL(url);
+	    }
+	    catch(MalformedURLException e){
+	      System.out.println("The url was malformed!");
+	      return "";
+	    }
+	    URLConnection urlCon = null;
+	    BufferedReader in = null;
+	    String outputText = "";
+	    try{
+	      urlCon = urlObj.openConnection();
+	      in = new BufferedReader(new InputStreamReader(urlCon.getInputStream()));
+	      String line = "";
+	      while((line = in.readLine()) != null){
+	        outputText += line;
+	      }
+	      in.close();
+	    }catch(IOException e){
+	      System.out.println("There was an error connecting to the URL");
+	      return "Error connecting to the URL";
+	    }
+	    return outputText;
 	}
 
 	private enum StockFields {
@@ -302,7 +350,7 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 			return ("PERatio");
 			}
 		},
-		PEGRATIO(9) {
+		PEGRATIO(11) {
 			@Override
 			public String toString() {
 			return ("PEGRatio");
@@ -725,12 +773,13 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 		return (completeInfoKeystats);
 	}
 
-	private void PersistsResultsYahooQuote(Stock[] completeInfo, Stock[] completeInfoKeystats) throws NotLoggedInException {
+	private void PersistsResultsYahooQuote(Stock[] completeInfo, Stock[] completeInfoKeystats, Stock[] bwInfo) throws NotLoggedInException {
 		
 		//Checking if the stock already exists in the datastore
 		UtilityClass.checkLoggedIn();
 		PersistenceManager pm = PMF.get().getPersistenceManager();	
 		
+	try {
 		try {
 			Query q = pm.newQuery(Stock.class, "user==u");
 			q.declareParameters("com.google.appengine.api.users.User u");
@@ -740,6 +789,8 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 			//for (Stock stock: stocks) {
 			//	LOG.log(Level.INFO,"list retrieved from Query in PersistsYahooResults :" + stock.getSymbol());
 			//}
+
+				
 			
 			for (Stock stock : stocks) {
 				for (Stock stockInfo : completeInfo) {
@@ -771,18 +822,28 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 						break;
 					}
 				}
-						
-							
+
+				for (Stock bwData: bwInfo) {
+					if (bwData.getSymbol().equals(stock.getSymbol())) {
+						stock.setQuickRatio(bwData.getQuickRatio());
+						break;
+					}
+				}
+			
 						//LOG.log(Level.INFO, "before writing in data store, stock " + stock.getSymbol() + " has PEGRatio of : " + stock.getPEGRatio() + "\n");
 						
 						//Write in datastore
-						pm.makePersistent(stock);
-					}
-
-			
-		} finally {
+				pm.makePersistent(stock);
+				}
+			} finally {
 			pm.close();
-		}
+			}
+			
+		} catch (Exception e) {
+			e.toString();
+		}	
+		
+		
 	}
 
 	/*	  
@@ -855,6 +916,5 @@ public class YahooStockServiceImpl extends RemoteServiceServlet implements
 				logger.log(Level.WARNING,"getQuoteValues issue");
 			}
 		}
-		
-	}
+}
 

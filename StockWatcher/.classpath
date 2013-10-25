@@ -28,5 +28,6 @@
 	<classpathentry kind="lib" path="C:/Downloads/Jersey_JAX-RS_2.0/jaxrs-ri-2.1/jaxrs-ri/lib/jersey-server.jar"/>
 	<classpathentry kind="lib" path="C:/Downloads/JsonParser_MVN Repo/javax.json-api-1.0.jar"/>
 	<classpathentry kind="lib" path="C:/Downloads/JsonParser_MVN Repo/javax.json-1.0-b06.jar"/>
+	<classpathentry kind="lib" path="C:/Downloads/jSoup/jsoup-1.7.2.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

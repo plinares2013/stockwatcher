@@ -62,6 +62,9 @@ public class Stock {
 	@Persistent
 	private double quarterlyEPS;
 	
+	@Persistent
+	private double quickRatio;
+	
 	
 	public Stock() {
 		this.createDate = new Date();
@@ -268,6 +271,14 @@ public class Stock {
 
 	public void setQuarterlyEPS(double quarterlyEPS) {
 		this.quarterlyEPS = quarterlyEPS;
+	}
+
+	public double getQuickRatio() {
+		return quickRatio;
+	}
+
+	public void setQuickRatio(double quickRatio) {
+		this.quickRatio = quickRatio;
 	}
 
 }
