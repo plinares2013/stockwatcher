@@ -46,7 +46,7 @@
     <url-pattern>/stockwatcher/yahooQuote</url-pattern>
   </servlet-mapping>
   
-     <servlet>
+  <servlet>
     <servlet-name>stockIndexService</servlet-name>
     <servlet-class>com.google.gwt.sample.stockwatcher.server.StockIndexServiceImpl</servlet-class>
   </servlet>
@@ -54,6 +54,61 @@
   <servlet-mapping>
     <servlet-name>stockIndexService</servlet-name>
     <url-pattern>/stockwatcher/index</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>scheduledInit</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.ScheduledInit</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+    <servlet-name>scheduledInit</servlet-name>
+    <url-pattern>/stockwatcher/cron/init</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>tickerList</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.TickerList</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>tickerList</servlet-name>
+    <url-pattern>/stockwatcher/tickerlist</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>refreshStock</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.RefreshStock</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>refreshStock</servlet-name>
+    <url-pattern>/stockwatcher/cron/refreshStock</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>stockCalculateAllIndexes</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.StockCalculateAllIndexes</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>stockCalculateAllIndexes</servlet-name>
+    <url-pattern>/stockwatcher/stockCalculateAllIndexes</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>getTopNIndexStocks</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.GetTopNIndexStocks</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>getTopNIndexStocks</servlet-name>
+    <url-pattern>/stockwatcher/getTopNIndexStocks</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>calculateBestStocksAverages</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.StockCalculateTopNAverages</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>calculateBestStocksAverages</servlet-name>
+    <url-pattern>/stockwatcher/calculateBestStocksAverages</url-pattern>
   </servlet-mapping>
   
   <!-- Default page to serve -->

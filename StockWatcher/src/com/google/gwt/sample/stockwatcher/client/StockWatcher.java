@@ -119,19 +119,20 @@ private void loadStockWatcher() {
 	//Offer possibility to logout
 	signOutLink.setHref(loginInfo.getLogoutUrl());
 	
-	//Initialize service on the server
-	StockIndexServiceAsync stockIndexService = GWT.create(StockIndexService.class);
-	
-	stockIndexService.init (new AsyncCallback<Void>() {
-		public void onFailure (Throwable error) {
-			handleError(error);
-		}
-		
-		@Override
-		public void onSuccess(Void ignore) {
-			logger.log(Level.WARNING,"StockIndexService is initialized");
-		}
-	});
+	//Initialize service on the server - Not needed as this is done on the server side.
+   /* StockIndexServiceAsync stockIndexService = GWT.create(StockIndexService.class);
+	*
+	*stockIndexService.init (new AsyncCallback<Void>() {
+	*	public void onFailure (Throwable error) {
+	*		handleError(error);
+	*	}
+	*	
+	*	@Override
+	*	public void onSuccess(Void ignore) {
+	*		logger.log(Level.WARNING,"StockIndexService is initialized");
+	*	}
+	*});
+	*/
 	
 	// Create table for stock data.  
 	stocksFlexTable.setText(0, 0, "Symbol");  
@@ -175,8 +176,8 @@ private void loadStockWatcher() {
     // Move cursor focus to the input box.
     newSymbolTextBox.setFocus(true);
     
-    //Retrieve stocks from persistence Datastore
-    loadStocks();
+    //Retrieve stocks from persistence Datastore - Not any more with 1000 stocks in datastore
+    //loadStocks();
     
     // Setup timer to refresh list automatically.
     Timer refreshTimer = new Timer() {
@@ -229,20 +230,23 @@ protected void addStock() {
 	
 }
 
-//Persist in Datastore then display symbol
+//Display symbol
 private void addStock(final String symbol) {
-	StockServiceAsync stockService = GWT.create(StockService.class);
 	
-	stockService.addStock (symbol, new AsyncCallback<Void>() {
-		public void onFailure (Throwable error) {
-			handleError(error);
-		}
+	//StockServiceAsync stockService = GWT.create(StockService.class);
+	
+	//stockService.addStock (symbol, new AsyncCallback<Void>() {
+	//	public void onFailure (Throwable error) {
+	//		handleError(error);
+	//	}
 		
-		@Override
-		public void onSuccess(Void ignore) {
-			displayStock(symbol);
-		}
-	});
+	//	@Override
+	//	public void onSuccess(Void ignore) {
+	//		displayStock(symbol);
+	//	}
+	//});
+	
+	displayStock(symbol);
 }
 
 //Logic to display stocks
@@ -260,7 +264,7 @@ public void displayStock (final String symbol) {
     Button removeStockButton = new Button("x");
     removeStockButton.addClickHandler(new ClickHandler() {
       public void onClick(ClickEvent event) {
-    	removeStockSymbolInDatastore(symbol);
+    	//removeStockSymbolInDatastore(symbol);
         int removedIndex = stocks.indexOf(symbol);
         stocks.remove(removedIndex);        
         stocksFlexTable.removeRow(removedIndex + 1);
@@ -320,7 +324,7 @@ protected void displayStockIndex(String symbol, String worth) {
 }
 
 /**
- * Remove the stock from the datastore
+ * Remove the stock from the datastore - Not used any more from client side.
  */
 private void removeStockSymbolInDatastore(String symbol) {
 	AsyncCallback<Void> callback = new AsyncCallback<Void> () {
@@ -343,7 +347,7 @@ private void removeStockSymbolInDatastore(String symbol) {
  */
 
 private void refreshWatchList () {
-	String url = JSON_URL;
+	//String url = JSON_URL;
 
 	//Nothing to refresh if the list is empty
 	if (stocks.isEmpty()) {
@@ -351,17 +355,17 @@ private void refreshWatchList () {
 	}
 	
 	// Append watch list stock symbols to query URL.
-	Iterator<String> iter = stocks.iterator();
-	while (iter.hasNext()) {
-	  url += "\"" + iter.next() + "\"";
-	  if (iter.hasNext()) {
-	    url += ",";
-	  } else {
-	    url += ")&format=json&env=store://datatables.org/alltableswithkeys";
-	  }
-	}
+	//Iterator<String> iter = stocks.iterator();
+	//while (iter.hasNext()) {
+	//  url += "\"" + iter.next() + "\"";
+	//  if (iter.hasNext()) {
+	//    url += ",";
+	//  } else {
+	//    url += ")&format=json&env=store://datatables.org/alltableswithkeys";
+	//  }
+	//}
 
-	url = URL.encode(url);
+	//url = URL.encode(url);
 	
 	//First method to refresh stock data is to contact
 	// the Yahoo REST API directly from the client (this program)
@@ -429,7 +433,7 @@ private void refreshWatchList () {
 	    });        
 */
 	    //Second method to refresh a stock is to call the server using RPC 
-	    // and have the server fetch the stock information from Yahoo REST API.
+	    // and have the server retrieve the stock information from the data store.
 	    // The data sent back from the server is a StockInformation[] .
 	    
 	    
@@ -437,7 +441,7 @@ private void refreshWatchList () {
 
 			  AsyncCallback<StockInformation[]> yCallback = new AsyncCallback<StockInformation[]> () {
 				  public void onFailure (Throwable error) {
-				        displayError("Couldn't retrieve stock info from yQuoteService");
+				        displayError("Couldn't retrieve stock info from stockService");
 				  }
 				  
 				  public void onSuccess (StockInformation stockInfo[]) {
@@ -445,11 +449,11 @@ private void refreshWatchList () {
 					  updateTable(datas);
 				  }
 			  };
-			  yQuoteService.getStockInformation(stocks.toArray(new String[stocks.size()]), yCallback);
+			  stockService.getStockInformation(stocks.toArray(new String[stocks.size()]), yCallback);
 		  	
 }
 
-/**  * If can't get JSON, display error message.  
+/**  * If can't get information from backend server, display error message.  
  **    @param error  
  **/  
 private void displayError(String error) {  
@@ -472,7 +476,8 @@ private void displayError(String error) {
 
 // Update the information of the stocks in the table
 private void updateTable(StockInformation[] infos) {
-	for ( int i=0; i< infos.length ; i++) {
+	//logger.log(Level.WARNING, "infos length = " + infos.length);
+	for ( int i=0; i < infos.length ; i++) {
 		updateTable(infos[i]);
 	}
 	
@@ -517,7 +522,7 @@ private void updateTable(StockInformation info) {
 	
 }
 
-
+// This function is not called. Now all stock management is done in the back end with 1000s of stocks.
 private void loadStocks() {
 	
 	AsyncCallback<String[]> callback = new AsyncCallback<String[]>() {  

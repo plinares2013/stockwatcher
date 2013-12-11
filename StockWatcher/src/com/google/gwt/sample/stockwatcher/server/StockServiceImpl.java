@@ -16,6 +16,7 @@ import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.google.gwt.sample.stockwatcher.client.NotLoggedInException;
 import com.google.gwt.sample.stockwatcher.client.StockService;
+import com.google.gwt.sample.stockwatcher.shared.StockInformation;
 import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 public class StockServiceImpl extends RemoteServiceServlet implements StockService {
@@ -83,6 +84,49 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 		
 		return (String[]) symbolList.toArray(new String[0]);
 	}
+	
+	//Called by front-end to display information
+	public StockInformation[] getStockInformation(String[] symbols) {
 		
+		StockInformation[] stockinfos = new StockInformation[symbols.length];
+		Stock[] stocks = new Stock[symbols.length];
+		for (int i=0; i < symbols.length ; i++) {
+			stockinfos[i] = new StockInformation();
+			stocks[i] = new Stock();
+		}
+		PersistenceManager pm = PMF.get().getPersistenceManager();
+		
+		try {
+			//Retrieve Stock object from datastore, 1 symbol at a time
+			int j =0;
+			for (String name : symbols) {
+				// Prepare query
+				Query q = pm.newQuery(Stock.class);
+				q.setFilter("symbol == ticker");
+				q.declareParameters("String ticker");
+				//Extract the fields from the datastore
+				List<Stock> results = (List<Stock>) q.execute(name);
+				if (!results.isEmpty()) {
+					for (Stock item : results) {
+						stocks[j] = item;
+						j++;
+					}
+				}
+			}
+			//Retrieve the properties to be displayed by front end
+			for (int k = 0 ; k < symbols.length ; k++) {
+				stockinfos[k].setSymbol(stocks[k].getSymbol());
+				stockinfos[k].setPrice(stocks[k].getPrice());
+				stockinfos[k].setChange(stocks[k].getChange());
+				stockinfos[k].setPercentChange(stocks[k].getPercentChange());
+			}
+		} finally {
+			pm.close();
+		}
+
+		
+		// Send to front end
+		return (stockinfos);
+	}
 	
 }

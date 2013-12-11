@@ -65,6 +65,12 @@ public class Stock {
 	@Persistent
 	private double quickRatio;
 	
+	@Persistent
+	private double index;
+	
+	@Persistent
+	private Date lastUpdated;
+	
 	
 	public Stock() {
 		this.createDate = new Date();
@@ -279,6 +285,22 @@ public class Stock {
 
 	public void setQuickRatio(double quickRatio) {
 		this.quickRatio = quickRatio;
+	}
+
+	public double getIndex() {
+		return index;
+	}
+
+	public void setIndex(double index) {
+		this.index = index;
+	}
+
+	public Date getLastUpdated() {
+		return lastUpdated;
+	}
+
+	public void setLastUpdated(Date lastUpdated) {
+		this.lastUpdated = lastUpdated;
 	}
 
 }
