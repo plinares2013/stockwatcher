@@ -1,8 +1,8 @@
-<!-- Indices written at Tue, 10 Dec 2013 22:01:34 PST -->
+<!-- Indices written at Tue, 24 Dec 2013 09:55:11 PST -->
 
 <datastore-indexes>
 
-    <!-- Used 22 times in query history -->
+    <!-- Used 5 times in query history -->
     <datastore-index kind="Stock" ancestor="false" source="auto">
         <property name="user" direction="asc"/>
         <property name="createDate" direction="asc"/>
