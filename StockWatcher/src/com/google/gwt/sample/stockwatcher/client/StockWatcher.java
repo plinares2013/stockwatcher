@@ -139,8 +139,9 @@ private void loadStockWatcher() {
 	stocksFlexTable.setText(0, 1, "Price");  
 	stocksFlexTable.setText(0, 2, "Change");  
 	stocksFlexTable.setText(0, 3, "Remove");
-	stocksFlexTable.setText(0, 4, "Calculate");
-	stocksFlexTable.setText(0, 5, "Calculate Results");
+	//stocksFlexTable.setText(0, 4, "Calculate");
+	//stocksFlexTable.setText(0, 5, "Calculate Results");
+	stocksFlexTable.setText(0, 4, "Index");
 	
     // Add styles to elements in the stock list table.
     stocksFlexTable.getRowFormatter().addStyleName(0, "watchListHeader");
@@ -148,8 +149,9 @@ private void loadStockWatcher() {
     stocksFlexTable.getCellFormatter().addStyleName(0, 1, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(0, 2, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(0, 3, "watchListRemoveColumn");
-    stocksFlexTable.getCellFormatter().addStyleName(0, 4, "watchListCalculateColumn");
-    stocksFlexTable.getCellFormatter().addStyleName(0, 5, "watchListCalculateResultsColumn");
+    //stocksFlexTable.getCellFormatter().addStyleName(0, 4, "watchListCalculateColumn");
+    stocksFlexTable.getCellFormatter().addStyleName(0, 4, "watchlistIndexColumn");
+    //stocksFlexTable.getCellFormatter().addStyleName(0, 5, "watchListCalculateResultsColumn");
     
 	 // Assemble Add Stock panel.
     addPanel.add(newSymbolTextBox);
@@ -175,18 +177,21 @@ private void loadStockWatcher() {
     
     // Move cursor focus to the input box.
     newSymbolTextBox.setFocus(true);
+
+
+    
     
     //Retrieve stocks from persistence Datastore - Not any more with 1000 stocks in datastore
     //loadStocks();
     
-    // Setup timer to refresh list automatically.
+    // Setup timer to refresh list automatically. - Disabled
     Timer refreshTimer = new Timer() {
       @Override
       public void run() {
         refreshWatchList();
       }
     };
-    refreshTimer.scheduleRepeating(REFRESH_INTERVAL);
+    //refreshTimer.scheduleRepeating(REFRESH_INTERVAL); - Disabled here
     
     // Listen for mouse events on the Add button.
     addStockButton.addClickHandler(new ClickHandler() {
@@ -272,7 +277,9 @@ public void displayStock (final String symbol) {
     });
     stocksFlexTable.setWidget(row, 3, removeStockButton);
     
-    //Add a button to calculate the worthiness value associated  to the stock
+    //TODO - Suppress once code is updated - Not used any more
+    //Add a button to calculate the worthiness value associated  to the stock - Not used any more
+    /* 
     Button calculateStockWorthButton = new Button("Calc");
     calculateStockWorthButton.addClickHandler(new ClickHandler() {
     	public void onClick (ClickEvent event) {
@@ -280,18 +287,22 @@ public void displayStock (final String symbol) {
     	}	
     });
     stocksFlexTable.setWidget(row, 4, calculateStockWorthButton);
-    
+    */
     stocksFlexTable.getCellFormatter().addStyleName(row, 1, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(row, 2, "watchListNumericColumn");
     stocksFlexTable.getCellFormatter().addStyleName(row, 3, "watchListRemoveColumn");
     removeStockButton.addStyleDependentName("remove");
-    stocksFlexTable.getCellFormatter().addStyleName(row, 4, "watchListRemoveColumn");
-    calculateStockWorthButton.addStyleDependentName("worthindex");
-    stocksFlexTable.getCellFormatter().addStyleName(row, 5, "watchListCalculateResultsColumn");
+    stocksFlexTable.getCellFormatter().addStyleName(0, 4, "watchlistIndexColumn");
+    //stocksFlexTable.getCellFormatter().addStyleName(row, 4, "watchListRemoveColumn");
+    //calculateStockWorthButton.addStyleDependentName("worthindex");
+    //stocksFlexTable.getCellFormatter().addStyleName(row, 5, "watchListCalculateResultsColumn");
     //Get the stock price.
     refreshWatchList();	
 }
 
+//TODO  - Suppress once code is updated.
+// Not used any more
+/*
 protected void calculateStockIndex(final String symbol) {
 	
 	StockIndexServiceAsync stockIndexService = GWT.create(StockIndexService.class);
@@ -307,8 +318,11 @@ protected void calculateStockIndex(final String symbol) {
 		}
 	});
 }
+*/
 
-protected void displayStockIndex(String symbol, String worth) {
+//TODO  - Suppress once code is updated.
+//Not used any more
+/*protected void displayStockIndex(String symbol, String worth) {
 	//Identify the row in the table associated to the symbol
 	int row = 0;
 	for (String str : stocks) {
@@ -322,11 +336,15 @@ protected void displayStockIndex(String symbol, String worth) {
     stocksFlexTable.setText(row+1 , 5, worth);
     
 }
+*/
 
 /**
  * Remove the stock from the datastore - Not used any more from client side.
  */
-private void removeStockSymbolInDatastore(String symbol) {
+
+/*
+  private void removeStockSymbolInDatastore(String symbol) {
+
 	AsyncCallback<Void> callback = new AsyncCallback<Void> () {
 		@Override
 		public void onFailure(Throwable caught) {
@@ -340,7 +358,8 @@ private void removeStockSymbolInDatastore(String symbol) {
 	
 	stockService.removeStock(symbol, callback);
 	logger.log(Level.WARNING,"Request to delete a symbol in DataStore");
-}
+  }
+*/
 
 /**
  *  Generate stock price
@@ -354,85 +373,8 @@ private void refreshWatchList () {
 		return;
 	}
 	
-	// Append watch list stock symbols to query URL.
-	//Iterator<String> iter = stocks.iterator();
-	//while (iter.hasNext()) {
-	//  url += "\"" + iter.next() + "\"";
-	//  if (iter.hasNext()) {
-	//    url += ",";
-	//  } else {
-	//    url += ")&format=json&env=store://datatables.org/alltableswithkeys";
-	//  }
-	//}
 
-	//url = URL.encode(url);
-	
-	//First method to refresh stock data is to contact
-	// the Yahoo REST API directly from the client (this program)
-	
-/*
- * 	  JsonpRequestBuilder builder = new JsonpRequestBuilder();
-	    builder.requestObject(url, new AsyncCallback<QueryYQL>() {
-	      public void onFailure(Throwable caught) {
-	        displayError("Couldn't retrieve JSON");
-	      }
-	      
-	      public void onSuccess(QueryYQL query) {
-	        if (query == null) {
-	        	displayError ("No JSON data retrieved");
-	        	return;
-	        }
-	        
-	        String symbol, sPrice, sChange, sPercentChange;
-	        double price, change, percentChange;
-	        StockInformation[] datas;
-	       
-	        
-	        int count;
-	        
-	        count = query.getCount();
-	    
-	        if (count==0) {
-	        	logger.log(Level.WARNING,"No JSON returned for the requested stock");
-	        	return;
-	        }
-	        
-	        datas = new StockInformation[count];
-	        
-	        for (int i=0; i<query.getCount(); i++) {
-	        	Quote quote = query.getQuote(i);
-	        	symbol = quote.getSymbol();
-	        	if ((sPrice = quote.getLastTradePriceOnly()) == null){
-	        		sPrice = "0";
-	        	}else {
-	        		sPrice = sPrice.replaceAll("\"", "");
-	        	}
-	        	price = Double.parseDouble(sPrice);
-	        	if ((sChange = quote.getChange()) == null) {
-	        		sChange="0";
-	        	} else {
-	        		sChange = sChange.replaceAll("\"","");
-	        	}
-	        	change = Double.parseDouble(sChange);
-	        	if ((sPercentChange = quote.getChangeinPercent()) == null) {
-	        		sPercentChange = "0";
-	        	} else {
-	        		sPercentChange = sPercentChange.replaceAll("\"", "");
-	        		sPercentChange = sPercentChange.replaceAll("%","");
-	        	}
-	        	percentChange = Double.parseDouble(sPercentChange);
-	        	
-	        	datas[i] = new StockInformation();
-	        	datas[i].setSymbol(symbol);
-	        	datas[i].setPrice(price);
-	        	datas[i].setChange(change);
-	        	datas[i].setPercentChange(percentChange);
-	        }
-        	updateTable(datas);
-	      }
-	    });        
-*/
-	    //Second method to refresh a stock is to call the server using RPC 
+	    //Method used to refresh a stock is to call the server using RPC 
 	    // and have the server retrieve the stock information from the data store.
 	    // The data sent back from the server is a StockInformation[] .
 	    
@@ -519,7 +461,10 @@ private void updateTable(StockInformation info) {
  }
 
  changeWidget.setStyleName(changeStyleName);
-	
+
+ // Populate the index
+ String index = NumberFormat.getFormat("#,##0.00").format(info.getIndex());
+ stocksFlexTable.setText(row,  4,  index);
 }
 
 // This function is not called. Now all stock management is done in the back end with 1000s of stocks.

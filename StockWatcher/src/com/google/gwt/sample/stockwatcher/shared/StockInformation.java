@@ -8,6 +8,7 @@ public class StockInformation implements Serializable {
 		  private double price;
 		  private double change;
 		  private double percentchange;
+		  private double index;
 
 		  public StockInformation() {
 		  }
@@ -49,6 +50,14 @@ public class StockInformation implements Serializable {
 		  
 		  public void setPercentChange(double percentchange) {
 			  this.percentchange = percentchange;
-	}
+		  }
+
+		public double getIndex() {
+			return index;
+		}
+
+		public void setIndex(double index) {
+			this.index = index;
+		}
 
 }

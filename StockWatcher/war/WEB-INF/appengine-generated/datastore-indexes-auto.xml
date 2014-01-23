@@ -1,33 +1,9 @@
-<!-- Indices written at Tue, 24 Dec 2013 09:55:11 PST -->
+<!-- Indices written at Tue, 21 Jan 2014 21:53:04 PST -->
 
 <datastore-indexes>
 
-    <!-- Used 5 times in query history -->
+    <!-- Used 4 times in query history -->
     <datastore-index kind="Stock" ancestor="false" source="auto">
-        <property name="user" direction="asc"/>
-        <property name="createDate" direction="asc"/>
-    </datastore-index>
-
-    <!-- Used 1 time in query history -->
-    <datastore-index kind="CriteriaTable" ancestor="false" source="auto">
-        <property name="user" direction="asc"/>
-        <property name="createDate" direction="asc"/>
-    </datastore-index>
-
-    <!-- Used 1 time in query history -->
-    <datastore-index kind="WeightTable" ancestor="false" source="auto">
-        <property name="user" direction="asc"/>
-        <property name="createDate" direction="asc"/>
-    </datastore-index>
-
-    <!-- Used 1 time in query history -->
-    <datastore-index kind="Stock" ancestor="false" source="auto">
-        <property name="user" direction="asc"/>
-        <property name="index" direction="desc"/>
-    </datastore-index>
-
-    <!-- Used 1 time in query history -->
-    <datastore-index kind="BestStock" ancestor="false" source="auto">
         <property name="user" direction="asc"/>
         <property name="createDate" direction="desc"/>
     </datastore-index>

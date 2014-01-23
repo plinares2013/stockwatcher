@@ -51,6 +51,13 @@ public class WeightTable {
 	
 	@Persistent
 	private double QuarterlyEPSWeight;
+	
+	@Persistent
+	private double PEGRatioWeight;
+	@Persistent
+	private double EPSQuarterlyGrowthYoYWeight;
+	@Persistent
+	private double PERatioWeight;
 
 	
 	
@@ -210,6 +217,30 @@ public class WeightTable {
 
 	public void setQuarterlyEPSWeight(double quarterlyEPSWeight) {
 		QuarterlyEPSWeight = quarterlyEPSWeight;
+	}
+
+	public double getPEGRatioWeight() {
+		return PEGRatioWeight;
+	}
+
+	public void setPEGRatioWeight(double pEGRatioWeight) {
+		PEGRatioWeight = pEGRatioWeight;
+	}
+
+	public double getEPSQuarterlyGrowthYoYWeight() {
+		return EPSQuarterlyGrowthYoYWeight;
+	}
+
+	public void setEPSQuarterlyGrowthYoYWeight(double ePSQuarterlyGrowthYoYWeight) {
+		EPSQuarterlyGrowthYoYWeight = ePSQuarterlyGrowthYoYWeight;
+	}
+
+	public double getPERatioWeight() {
+		return PERatioWeight;
+	}
+
+	public void setPERatioWeight(double pERatioWeight) {
+		PERatioWeight = pERatioWeight;
 	}
 	
 	

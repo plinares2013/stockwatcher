@@ -75,6 +75,7 @@
     <url-pattern>/stockwatcher/tickerlist</url-pattern>
   </servlet-mapping>
   
+
   <servlet>
     <servlet-name>refreshStock</servlet-name>
     <servlet-class>com.google.gwt.sample.stockwatcher.server.RefreshStock</servlet-class>
@@ -82,6 +83,15 @@
   <servlet-mapping>
     <servlet-name>refreshStock</servlet-name>
     <url-pattern>/stockwatcher/cron/refreshStock</url-pattern>
+  </servlet-mapping>
+  
+  <servlet>
+    <servlet-name>refreshStock3</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.RefreshStock</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>refreshStock3</servlet-name>
+    <url-pattern>/stockwatcher/backends/refreshStock</url-pattern>
   </servlet-mapping>
   
   <servlet>
@@ -109,6 +119,16 @@
   <servlet-mapping>
     <servlet-name>calculateBestStocksAverages</servlet-name>
     <url-pattern>/stockwatcher/calculateBestStocksAverages</url-pattern>
+  </servlet-mapping>
+  
+
+  <servlet>
+    <servlet-name>refreshstock2</servlet-name>
+    <servlet-class>com.google.gwt.sample.stockwatcher.server.RefreshStock</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>refreshstock2</servlet-name>
+    <url-pattern>/_ah/start</url-pattern>
   </servlet-mapping>
   
   <!-- Default page to serve -->

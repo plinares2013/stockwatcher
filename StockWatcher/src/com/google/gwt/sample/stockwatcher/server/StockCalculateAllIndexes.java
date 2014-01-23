@@ -30,6 +30,7 @@ public class StockCalculateAllIndexes extends HttpServlet {
 	int rangeIndex = UtilityClass.getRangeIndex();   // Number of indexes calculated by 1 task
 //	int rangeIndex = 3;
 	int bestNStocks = UtilityClass.getTopNStocks();
+	int peThreshold = UtilityClass.getpeThreshold();
 	
 	TaskHandle handle = null;
 	Queue defaultQueue = QueueFactory.getDefaultQueue();
@@ -221,8 +222,8 @@ public class StockCalculateAllIndexes extends HttpServlet {
 		
 		double priceSalesPoints = 0, priceBookPoints = 0, profitMarginPoints = 0, ROEPoints = 0;
 		double ROAPoints = 0, debtEquityPoints = 0, currentPoints = 0, oneYearEPSPoints = 0, quarterlyEPSPoints = 0;
-		double managementOwnershipPoints = 0, quickRatioPoints = 0;
-		double worth = 0;
+		double managementOwnershipPoints = 0, quickRatioPoints = 0, PEGRatioPoints = 0, EPSQuarterlyGrowthYoYPoints=0 ;
+		double worth = 0, PERatio;
 		
 		if (stock.getPriceSales() == 0) {
 			priceSalesPoints = 0;
@@ -388,7 +389,37 @@ public class StockCalculateAllIndexes extends HttpServlet {
 			LOG.log(Level.WARNING, "ManagementOwnership out of range for " + stock.getSymbol() + "\n");
 		}
 		
-		//Calculate the index for the stock
+		//Points for PEGRatio
+		if (stock.getPEGRatio() == 0) {
+			PEGRatioPoints = 0;
+		} else if (stock.getPEGRatio() < criteriaTable.getPEGRatioLevel1()) {
+			PEGRatioPoints = criteriaTable.getPEGRatioLevel1Points();
+		} else if ( stock.getPEGRatio() < criteriaTable.getPEGRatioLevel2()) {
+			PEGRatioPoints = criteriaTable.getPEGRatioLevel2Points();
+		} else if ( stock.getPEGRatio() < criteriaTable.getPEGRatioLevel3()) {
+			PEGRatioPoints = criteriaTable.getPEGRatioLevel3Points();
+		} else if ( stock.getPEGRatio() >= criteriaTable.getPEGRatioLevel3()) {
+			PEGRatioPoints = criteriaTable.getPEGRatioLevel4Points();
+		} else {
+			LOG.log(Level.WARNING, "PEGRatio out of range for " + stock.getSymbol() + "\n");
+		}
+				
+		//Points for EPSQuarterlyGrowthYoY
+		if (stock.getEPSQuarterlyGrowthYoY() == 0) {
+			EPSQuarterlyGrowthYoYPoints = 0;
+		} else if (stock.getEPSQuarterlyGrowthYoY() < criteriaTable.getEPSQuarterlyGrowthYoYLevel1()) {
+			EPSQuarterlyGrowthYoYPoints = criteriaTable.getEPSQuarterlyGrowthYoYLevel1Points();
+		} else if ( stock.getEPSQuarterlyGrowthYoY() < criteriaTable.getEPSQuarterlyGrowthYoYLevel2()) {
+			EPSQuarterlyGrowthYoYPoints = criteriaTable.getEPSQuarterlyGrowthYoYLevel2Points();
+		} else if ( stock.getEPSQuarterlyGrowthYoY() < criteriaTable.getEPSQuarterlyGrowthYoYLevel3()) {
+			EPSQuarterlyGrowthYoYPoints = criteriaTable.getEPSQuarterlyGrowthYoYLevel3Points();
+		} else if ( stock.getEPSQuarterlyGrowthYoY() >= criteriaTable.getEPSQuarterlyGrowthYoYLevel3()) {
+			EPSQuarterlyGrowthYoYPoints = criteriaTable.getEPSQuarterlyGrowthYoYLevel4Points();
+		} else {
+			LOG.log(Level.WARNING, "EPSQuarterlyGrowthYoY out of range for " + stock.getSymbol() + "\n");
+		}
+		
+		//Calculate the total points for the stock
 		
 		worth = priceSalesPoints * weightTable.getPriceSalesWeight() +
 				priceBookPoints * weightTable.getPriceBookWeight() +
@@ -399,8 +430,17 @@ public class StockCalculateAllIndexes extends HttpServlet {
 				currentPoints * weightTable.getCurrentWeight() +
 				quickRatioPoints * weightTable.getQuickWeight() +
 				oneYearEPSPoints * weightTable.getOneYearEPSWeight() +
-				quarterlyEPSPoints * weightTable.getQuarterlyEPSWeight() +
-				managementOwnershipPoints * weightTable.getManagementOwnershipWeight();
+				//quarterlyEPSPoints * weightTable.getQuarterlyEPSWeight() +
+				managementOwnershipPoints * weightTable.getManagementOwnershipWeight() +
+				PEGRatioPoints * weightTable.getPEGRatioWeight() +
+				EPSQuarterlyGrowthYoYPoints * weightTable.getEPSQuarterlyGrowthYoYWeight();
+		
+		//Normalize points total with P/E Ratio - Idea is to favor low P/E ratios.
+		if (stock.getPERatio() >= peThreshold) {
+			worth = worth/(stock.getPERatio());
+		} else {   // Disqualify all stocks with P/E < 3
+			worth = 0;
+		}
 		
 		return (worth);
 	}

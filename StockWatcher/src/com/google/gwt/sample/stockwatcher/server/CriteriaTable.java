@@ -208,6 +208,58 @@ public class CriteriaTable {
 	@Persistent
 	int QuickRatioLevel4Points;
 	
+	@Persistent
+	double PEGRatioLevel1;
+	@Persistent
+	int PEGRatioLevel1Points;
+	@Persistent
+	double PEGRatioLevel2;
+	@Persistent
+	int PEGRatioLevel2Points;
+	@Persistent
+	double PEGRatioLevel3;
+	@Persistent
+	int PEGRatioLevel3Points;
+	@Persistent
+	double PEGRatioLevel4;
+	@Persistent
+	int PEGRatioLevel4Points;
+	
+	@Persistent
+	double EPSQuarterlyGrowthYoYLevel1;
+	@Persistent
+	int EPSQuarterlyGrowthYoYLevel1Points;
+	@Persistent
+	double EPSQuarterlyGrowthYoYLevel2;
+	@Persistent
+	int EPSQuarterlyGrowthYoYLevel2Points;
+	@Persistent
+	double EPSQuarterlyGrowthYoYLevel3;
+	@Persistent
+	int EPSQuarterlyGrowthYoYLevel3Points;
+	@Persistent
+	double EPSQuarterlyGrowthYoYLevel4;
+	@Persistent
+	int EPSQuarterlyGrowthYoYLevel4Points;
+	
+	@Persistent
+	double PERatioLevel1;
+	@Persistent
+	int PERatioLevel1Points;
+	@Persistent
+	double PERatioLevel2;
+	@Persistent
+	int PERatioLevel2Points;
+	@Persistent
+	double PERatioLevel3;
+	@Persistent
+	int PERatioLevel3Points;
+	@Persistent
+	double PERatioLevel4;
+	@Persistent
+	int PERatioLevel4Points;
+	
+	
 	public  CriteriaTable () {
 	this.createDate = new Date();	
 	}
@@ -899,6 +951,202 @@ public class CriteriaTable {
 
 	public void setQuickRatioLevel4Points(int quickRatioLevel4Points) {
 		QuickRatioLevel4Points = quickRatioLevel4Points;
+	}
+
+	public double getPEGRatioLevel1() {
+		return PEGRatioLevel1;
+	}
+
+	public void setPEGRatioLevel1(double pEGRatioLevel1) {
+		PEGRatioLevel1 = pEGRatioLevel1;
+	}
+
+	public int getPEGRatioLevel1Points() {
+		return PEGRatioLevel1Points;
+	}
+
+	public void setPEGRatioLevel1Points(int pEGRatioLevel1Points) {
+		PEGRatioLevel1Points = pEGRatioLevel1Points;
+	}
+
+	public double getPEGRatioLevel2() {
+		return PEGRatioLevel2;
+	}
+
+	public void setPEGRatioLevel2(double pEGRatioLevel2) {
+		PEGRatioLevel2 = pEGRatioLevel2;
+	}
+
+	public int getPEGRatioLevel2Points() {
+		return PEGRatioLevel2Points;
+	}
+
+	public void setPEGRatioLevel2Points(int pEGRatioLevel2Points) {
+		PEGRatioLevel2Points = pEGRatioLevel2Points;
+	}
+
+	public double getPEGRatioLevel3() {
+		return PEGRatioLevel3;
+	}
+
+	public void setPEGRatioLevel3(double pEGRatioLevel3) {
+		PEGRatioLevel3 = pEGRatioLevel3;
+	}
+
+	public int getPEGRatioLevel3Points() {
+		return PEGRatioLevel3Points;
+	}
+
+	public void setPEGRatioLevel3Points(int pEGRatioLevel3Points) {
+		PEGRatioLevel3Points = pEGRatioLevel3Points;
+	}
+
+	public double getPEGRatioLevel4() {
+		return PEGRatioLevel4;
+	}
+
+	public void setPEGRatioLevel4(double pEGRatioLevel4) {
+		PEGRatioLevel4 = pEGRatioLevel4;
+	}
+
+	public int getPEGRatioLevel4Points() {
+		return PEGRatioLevel4Points;
+	}
+
+	public void setPEGRatioLevel4Points(int pEGRatioLevel4Points) {
+		PEGRatioLevel4Points = pEGRatioLevel4Points;
+	}
+
+	public double getEPSQuarterlyGrowthYoYLevel1() {
+		return EPSQuarterlyGrowthYoYLevel1;
+	}
+
+	public void setEPSQuarterlyGrowthYoYLevel1(double ePSQuarterlyGrowthYoYLevel1) {
+		EPSQuarterlyGrowthYoYLevel1 = ePSQuarterlyGrowthYoYLevel1;
+	}
+
+	public int getEPSQuarterlyGrowthYoYLevel1Points() {
+		return EPSQuarterlyGrowthYoYLevel1Points;
+	}
+
+	public void setEPSQuarterlyGrowthYoYLevel1Points(
+			int ePSQuarterlyGrowthYoYLevel1Points) {
+		EPSQuarterlyGrowthYoYLevel1Points = ePSQuarterlyGrowthYoYLevel1Points;
+	}
+
+	public double getEPSQuarterlyGrowthYoYLevel2() {
+		return EPSQuarterlyGrowthYoYLevel2;
+	}
+
+	public void setEPSQuarterlyGrowthYoYLevel2(double ePSQuarterlyGrowthYoYLevel2) {
+		EPSQuarterlyGrowthYoYLevel2 = ePSQuarterlyGrowthYoYLevel2;
+	}
+
+	public int getEPSQuarterlyGrowthYoYLevel2Points() {
+		return EPSQuarterlyGrowthYoYLevel2Points;
+	}
+
+	public void setEPSQuarterlyGrowthYoYLevel2Points(
+			int ePSQuarterlyGrowthYoYLevel2Points) {
+		EPSQuarterlyGrowthYoYLevel2Points = ePSQuarterlyGrowthYoYLevel2Points;
+	}
+
+	public double getEPSQuarterlyGrowthYoYLevel3() {
+		return EPSQuarterlyGrowthYoYLevel3;
+	}
+
+	public void setEPSQuarterlyGrowthYoYLevel3(double ePSQuarterlyGrowthYoYLevel3) {
+		EPSQuarterlyGrowthYoYLevel3 = ePSQuarterlyGrowthYoYLevel3;
+	}
+
+	public int getEPSQuarterlyGrowthYoYLevel3Points() {
+		return EPSQuarterlyGrowthYoYLevel3Points;
+	}
+
+	public void setEPSQuarterlyGrowthYoYLevel3Points(
+			int ePSQuarterlyGrowthYoYLevel3Points) {
+		EPSQuarterlyGrowthYoYLevel3Points = ePSQuarterlyGrowthYoYLevel3Points;
+	}
+
+	public double getEPSQuarterlyGrowthYoYLevel4() {
+		return EPSQuarterlyGrowthYoYLevel4;
+	}
+
+	public void setEPSQuarterlyGrowthYoYLevel4(double ePSQuarterlyGrowthYoYLevel4) {
+		EPSQuarterlyGrowthYoYLevel4 = ePSQuarterlyGrowthYoYLevel4;
+	}
+
+	public int getEPSQuarterlyGrowthYoYLevel4Points() {
+		return EPSQuarterlyGrowthYoYLevel4Points;
+	}
+
+	public void setEPSQuarterlyGrowthYoYLevel4Points(
+			int ePSQuarterlyGrowthYoYLevel4Points) {
+		EPSQuarterlyGrowthYoYLevel4Points = ePSQuarterlyGrowthYoYLevel4Points;
+	}
+
+	public double getPERatioLevel1() {
+		return PERatioLevel1;
+	}
+
+	public void setPERatioLevel1(double pERatioLevel1) {
+		PERatioLevel1 = pERatioLevel1;
+	}
+
+	public int getPERatioLevel1Points() {
+		return PERatioLevel1Points;
+	}
+
+	public void setPERatioLevel1Points(int pERatioLevel1Points) {
+		PERatioLevel1Points = pERatioLevel1Points;
+	}
+
+	public double getPERatioLevel2() {
+		return PERatioLevel2;
+	}
+
+	public void setPERatioLevel2(double pERatioLevel2) {
+		PERatioLevel2 = pERatioLevel2;
+	}
+
+	public int getPERatioLevel2Points() {
+		return PERatioLevel2Points;
+	}
+
+	public void setPERatioLevel2Points(int pERatioLevel2Points) {
+		PERatioLevel2Points = pERatioLevel2Points;
+	}
+
+	public double getPERatioLevel3() {
+		return PERatioLevel3;
+	}
+
+	public void setPERatioLevel3(double pERatioLevel3) {
+		PERatioLevel3 = pERatioLevel3;
+	}
+
+	public int getPERatioLevel3Points() {
+		return PERatioLevel3Points;
+	}
+
+	public void setPERatioLevel3Points(int pERatioLevel3Points) {
+		PERatioLevel3Points = pERatioLevel3Points;
+	}
+
+	public double getPERatioLevel4() {
+		return PERatioLevel4;
+	}
+
+	public void setPERatioLevel4(double pERatioLevel4) {
+		PERatioLevel4 = pERatioLevel4;
+	}
+
+	public int getPERatioLevel4Points() {
+		return PERatioLevel4Points;
+	}
+
+	public void setPERatioLevel4Points(int pERatioLevel4Points) {
+		PERatioLevel4Points = pERatioLevel4Points;
 	}
 	
 }

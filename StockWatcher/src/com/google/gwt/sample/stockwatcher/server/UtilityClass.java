@@ -15,12 +15,16 @@ public class UtilityClass {
 	private static String taskRandom = null;
 	
 	//TODO - Delays and numbers to be configurable by the user through GUI
-	private static long delayRefreshStockTask = 120000; // Delay of 1000 = 1s
+	private static long delayRefreshStockTask = 1500000; // Delay of 1000 = 1s
 	private static long delayCalculateAllIndextask = 600000; // Delay of 1000 = 1s
 	
-	private static int rangeStock = 50; // Number of stocks refreshed by 1 StockRefreshTask
+	private static int rangeStock = 100; // Number of stocks refreshed by 1 StockRefreshTask
 	private static int rangeIndex = 600; // Number of indexes handled by 1 StockCalculateAllIndexes
 	private static int topNStocks = 10; // Number of stocks to select for BestStocks
+	
+	private static int peThreshold = 3; //Minimal P/E ratio to be considered for index evaluation
+	
+	private static String stockOrder = "descending";  // Can be wither ascending or descending
 	
 	
 	public static User getUser() {
@@ -94,6 +98,22 @@ public class UtilityClass {
 
 	public static void setDelayRefreshStockTask(long delayRefreshStockTask) {
 		UtilityClass.delayRefreshStockTask = delayRefreshStockTask;
+	}
+
+	public static int getpeThreshold() {
+		return peThreshold;
+	}
+
+	public static void setpeThreshold(int peThreshold) {
+		UtilityClass.peThreshold = peThreshold;
+	}
+
+	public static String getStockOrder() {
+		return stockOrder;
+	}
+
+	public static void setStockOrder(String stockOrder) {
+		UtilityClass.stockOrder = stockOrder;
 	}
 	
 }

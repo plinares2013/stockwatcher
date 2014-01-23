@@ -28,69 +28,15 @@ public class TickerList extends HttpServlet {
 	
 	public void doGet (HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		// Get the list of symbols and persist in datastore
-		logger.log(Level.WARNING, "First task queued: to build the ticker list");
-		PersistenceManager pm = PMF.get().getPersistenceManager();
-		boolean foundStock = false;
+		logger.log(Level.INFO, "First task queued: to build the ticker list");
 		
 		//Read the list from the local file system (files in resources directory)
 		BufferedReader reader = null;
-		String sLine = "", headerline ="";
-		String symbol = "";
-
-		try {
+		
+		//Handle all stocks from NASDAQ
+		reader = new BufferedReader (new FileReader ("resources/companylist_NASDAQ_Overall_List.csv"));
 			
-			//Get all symbols already in the datastore
-			Query q = pm.newQuery(Stock.class, "user==u");
-			q.declareParameters("com.google.appengine.api.users.User u");
-			q.setOrdering("createDate");
-			List<Stock> storedStocks = (List<Stock>) q.execute(UtilityClass.getUser());
-			
-			//Handle all stocks from NASDAQ
-			reader = new BufferedReader (new FileReader ("resources/companylist_NASDAQ_Overall_List.csv"));
-			headerline = reader.readLine();
-
-			while ((sLine = reader.readLine()) != null) {
-				
-				//Extract first part of the line (the ticker)
-				String[] split = sLine.split(",");
-				symbol = split[0];
-				symbol = symbol.trim();  //Get rid of leading or trailing spaces
-				
-				//Skip all symbols with ^ or /
-				if ( (symbol.contains("^")) || (symbol.contains("/"))) {
-					continue;
-				}
-			
-				//Check if symbol already in the datastore
-				for (Stock stored : storedStocks) {
-					if (stored.getSymbol().equals(symbol)) {
-						foundStock = true;
-						break;
-					}
-				}
-				if (foundStock == false) {
-					Stock stock = new Stock();
-					stock.setSymbol(symbol);
-					//Persist in the datastore with JDO
-					pm.makePersistent(stock);
-				}
-				
-				foundStock = false;
-			}
-		} catch (IOException e ) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (reader != null) {
-					reader.close();
-				} 
-				if (pm != null) {
-					pm.close();
-				}
-			}catch (IOException e ) {
-					e.printStackTrace();
-				}
-			}
+		int result = updateStocksInDataStore(reader);
 		
 		//Launch the next initialization step for NYSE stocks
 		String taskName = UtilityClass.createTaskName("Tickerlist");
@@ -101,74 +47,99 @@ public class TickerList extends HttpServlet {
 		return;
 		}
 
+	
+
 	@Override
 	public void doPost (HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		
 		// Handle the initialization of NYSE stocks in a separate task
 		
 		// Get the list of symbols and persist in datastore
-		logger.log(Level.WARNING, "First task queued: to build the ticker list");
+		//logger.log(Level.WARNING, "First task queued: to build the ticker list");
 		PersistenceManager pm = PMF.get().getPersistenceManager();
 		
 		//Read the list from the local file system (files in resources directory)
 		BufferedReader reader = null;
-		String sLine = "", headerline ="";
-		String symbol = "";
-
-		try {
 			
-			//Use a different implementation from the GET method above
-			// Instead of reading the entire Stock table, read one at a time while iterating 
-			// to check if the stock is already in the database
+		//Handle all stocks from NYSE
+		reader = new BufferedReader (new FileReader ("resources/companylist_NYSE_Overall_List.csv"));
 			
-			
-			
-			//Handle all stocks from NYSE
-			reader = new BufferedReader (new FileReader ("resources/companylist_NYSE_Overall_List.csv"));
-			headerline = reader.readLine();
-
-			while ((sLine = reader.readLine()) != null) {
-				
-				//Extract first part of the line (the ticker)
-				String[] split = sLine.split(",");
-				symbol = split[0];
-				symbol = symbol.trim();  //Get rid of leading or trailing spaces
-				
-				//Skip all symbols with ^ or /
-				if ( (symbol.contains("^")) || (symbol.contains("/"))) {
-					continue;
-				}
-			
-				//Check if symbol already in the datastore
-
-				Query q = pm.newQuery(Stock.class, "symbol==sym");
-				q.declareParameters("String sym");
-				List<Stock> storedStocks = (List<Stock>) q.execute(symbol);
-				
-				//If not in data store
-				if (storedStocks.isEmpty()) {
-					Stock stock = new Stock();
-					stock.setSymbol(symbol);
-					//Persist in the datastore with JDO
-					pm.makePersistent(stock);
-				}
-				
-			}
-		} catch (IOException e ) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (reader != null) {
-					reader.close();
-				} 
-				if (pm != null) {
-					pm.close();
-				}
-			}catch (IOException e ) {
-					e.printStackTrace();
-				}
-			}
+		int result = updateStocksInDataStore(reader);
 		
+		//Initialize AMEX stocks
+		reader = new BufferedReader (new FileReader ("resources/companylist_AMEX_Overall_List.csv"));
+		
+		result = updateStocksInDataStore(reader);
+			
 		return;
 	}
-}
+
+
+	private int updateStocksInDataStore(BufferedReader reader) {
+	
+		PersistenceManager pm = PMF.get().getPersistenceManager();
+	
+		//Read the list from the local file system (files in resources directory)
+		String sLine = "", headerline ="";
+		String symbol = "";
+	
+	try {
+		headerline = reader.readLine();  //Skip headerline in Excel file
+		
+		while ((sLine = reader.readLine()) != null) {
+			
+			//Extract first part of the line (the ticker)
+			String[] split = sLine.split(",");
+			symbol = split[0];
+			symbol = symbol.trim();  //Get rid of leading or trailing spaces
+			
+			//Skip all symbols with ^ or /
+			if ( (symbol.contains("^")) || (symbol.contains("/"))) {
+				continue;
+			}
+			
+			//Eliminate any " in the symbol
+			symbol = symbol.replaceAll("\"","");
+		
+			//Check if symbol already in the datastore
+
+			Query q = pm.newQuery(Stock.class, "symbol==sym");
+			q.declareParameters("String sym");
+			List<Stock> storedStocks = (List<Stock>) q.execute(symbol);
+			
+			//If not in data store
+			if (storedStocks.isEmpty()) {
+				Stock stock = new Stock();
+				stock.setSymbol(symbol);
+				//Persist in the datastore with JDO
+				pm.makePersistent(stock);
+			} else {
+				for (Stock stock : storedStocks) {
+					if (stock.getSymbol().contains("\"")) {  // Eliminate all symbols with a "
+						pm.deletePersistent(stock);
+					} else {
+						pm.makePersistent(stock); //Of interest when new fields are added to the Stock object, to create these fields in the datastore	
+					}
+				}
+
+			}
+		}
+	} catch (IOException e ) {
+		e.printStackTrace();
+	} finally {
+		try {
+			if (reader != null) {
+				reader.close();
+			} 
+			if (pm != null) {
+				pm.close();
+			}
+		}catch (IOException e ) {
+			e.printStackTrace();
+		}
+	}
+	
+	return 0;
+	}
+	
+	}

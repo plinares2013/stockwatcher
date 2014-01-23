@@ -57,7 +57,10 @@ body {
   text-align: center;
 }
 
-
+/* stock list index column */
+.watchListIndexColumn {
+  text-align: center;
+}
 
 /* Add Stock panel */
 .addPanel {

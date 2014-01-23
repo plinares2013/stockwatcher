@@ -49,6 +49,8 @@ public class ScheduledInit extends HttpServlet {
 					weightTable.setFreeCashFlowPerShareWeight(8);
 					weightTable.setManagementOwnershipWeight(8);
 					weightTable.setQuarterlyEPSWeight(10);
+					weightTable.setPEGRatioWeight(5);
+					weightTable.setEPSQuarterlyGrowthYoYWeight(10);
 					
 					// Store in datastore
 						pm.makePersistent(weightTable);
@@ -170,6 +172,24 @@ public class ScheduledInit extends HttpServlet {
 					criteriaTable.setQuickRatioLevel2Points(5);
 					criteriaTable.setQuickRatioLevel3Points(8);
 					criteriaTable.setQuickRatioLevel4Points(10);
+					
+					criteriaTable.setPEGRatioLevel1(1);
+					criteriaTable.setPEGRatioLevel2(2);
+					criteriaTable.setPEGRatioLevel3(3);
+					criteriaTable.setPEGRatioLevel4(5);
+					criteriaTable.setPEGRatioLevel1Points(10);
+					criteriaTable.setPEGRatioLevel2Points(5);
+					criteriaTable.setPEGRatioLevel3Points(3);
+					criteriaTable.setPEGRatioLevel4Points(0);
+					
+					criteriaTable.setEPSQuarterlyGrowthYoYLevel1(5);
+					criteriaTable.setEPSQuarterlyGrowthYoYLevel2(30);
+					criteriaTable.setEPSQuarterlyGrowthYoYLevel3(50);
+					criteriaTable.setEPSQuarterlyGrowthYoYLevel4(90);
+					criteriaTable.setEPSQuarterlyGrowthYoYLevel1Points(0);
+					criteriaTable.setEPSQuarterlyGrowthYoYLevel2Points(3);
+					criteriaTable.setEPSQuarterlyGrowthYoYLevel3Points(5);
+					criteriaTable.setEPSQuarterlyGrowthYoYLevel4Points(10);
 					
 					//Persist in datastore
 					try {

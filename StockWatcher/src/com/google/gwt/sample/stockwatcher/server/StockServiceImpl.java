@@ -21,7 +21,7 @@ import com.google.gwt.user.server.rpc.RemoteServiceServlet;
 
 public class StockServiceImpl extends RemoteServiceServlet implements StockService {
 
-	private static final Logger LOG = Logger.getLogger(StockServiceImpl.class.getName());
+	private static final Logger logger = Logger.getLogger(StockServiceImpl.class.getName());
 	//private static PersistenceManagerFactory PMF = JDOHelper.getPersistenceManagerFactory("transactions-optional");
 	
 	public void addStock (String symbol) throws NotLoggedInException {
@@ -53,7 +53,7 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 			}
 			
 			if (deleteCount != 1) {
-				LOG.log(Level.WARNING, "removeStock deleted " + deleteCount + " Stocks" );
+				logger.log(Level.INFO, "removeStock deleted " + deleteCount + " Stocks" );
 			}
 		} finally {
 			pm.close();
@@ -86,7 +86,10 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 	}
 	
 	//Called by front-end to display information
-	public StockInformation[] getStockInformation(String[] symbols) {
+	public StockInformation[] getStockInformation(String[] symbols) throws NotLoggedInException{
+		
+		
+		UtilityClass.checkLoggedIn();
 		
 		StockInformation[] stockinfos = new StockInformation[symbols.length];
 		Stock[] stocks = new Stock[symbols.length];
@@ -106,10 +109,18 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 				q.declareParameters("String ticker");
 				//Extract the fields from the datastore
 				List<Stock> results = (List<Stock>) q.execute(name);
-				if (!results.isEmpty()) {
+				if (results.size() == 1) {
 					for (Stock item : results) {
 						stocks[j] = item;
-						j++;
+						//logger.log(Level.INFO,"j is equal to: " + j);
+							j++;
+					}
+				} else {
+					if (results.isEmpty()) {
+						logger.log(Level.WARNING,"Ticker " + name + " is not in the data store");
+					}
+					if ((results.size()) > 1) {
+						logger.log(Level.WARNING,"More than 1 record for symbol " + name + " in the data store");
 					}
 				}
 			}
@@ -119,6 +130,7 @@ public class StockServiceImpl extends RemoteServiceServlet implements StockServi
 				stockinfos[k].setPrice(stocks[k].getPrice());
 				stockinfos[k].setChange(stocks[k].getChange());
 				stockinfos[k].setPercentChange(stocks[k].getPercentChange());
+				stockinfos[k].setIndex(stocks[k].getIndex());
 			}
 		} finally {
 			pm.close();

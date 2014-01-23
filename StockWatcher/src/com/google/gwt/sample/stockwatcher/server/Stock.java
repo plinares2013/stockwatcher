@@ -71,6 +71,9 @@ public class Stock {
 	@Persistent
 	private Date lastUpdated;
 	
+	@Persistent
+	private double EPSQuarterlyGrowthYoY;
+	
 	
 	public Stock() {
 		this.createDate = new Date();
@@ -301,6 +304,14 @@ public class Stock {
 
 	public void setLastUpdated(Date lastUpdated) {
 		this.lastUpdated = lastUpdated;
+	}
+
+	public double getEPSQuarterlyGrowthYoY() {
+		return EPSQuarterlyGrowthYoY;
+	}
+
+	public void setEPSQuarterlyGrowthYoY(double ePSQuarterlyGrowthYoY) {
+		EPSQuarterlyGrowthYoY = ePSQuarterlyGrowthYoY;
 	}
 
 }

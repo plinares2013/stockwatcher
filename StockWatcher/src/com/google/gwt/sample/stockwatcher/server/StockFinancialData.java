@@ -60,6 +60,7 @@ public class StockFinancialData {
 	double price = 0, change = 0, percentChange = 0, priceSales =0, priceBook = 0, PERatio = 0, PEGRatio = 0;
 	double EPSEstimateCurrentYear = 0, EPSEstimateNextYear = 0, PriceEPSEstimateCurrentYear = 0, PriceEPSEstimateNextYear = 0;
 	double profitMargin = 0, returnonAssets = 0, returnonEquity = 0, totalDebtEquity = 0, currentRatio = 0, percentageHeldbyInsiders = 0;
+	double EPSQuarterlyGrowthYoY = 0;
 	StockInformation[] datas;
 	Stock[] completeInfo, completeInfoKeystats, bwInfo;
 	private int count = 0, countKeystats = 0;
@@ -80,6 +81,7 @@ public class StockFinancialData {
 		StringReader reader = null;
 		JsonParser parser = null;
 		
+		Stock scratch = null;
 		datas = new StockInformation[symbols.length];
 		completeInfo = new Stock[symbols.length];
 		completeInfoKeystats = new Stock[symbols.length];
@@ -222,8 +224,11 @@ public class StockFinancialData {
 			//Using the fact that there is only 1 symbol in the array symbols[]
 			logger.log(Level.WARNING,"After invocation.invoke  with Entity reader for symbol " + symbols[0]);
 		}
-	
-		// Contact the Business Week site to get extra info per stock (Jsoup is used)
+
+/*
+ * 		Contact the Business Week site to get extra info per stock (Jsoup is used)
+ */
+		
 		j=0;
 		iter = lSymbols.iterator();
 		while (iter.hasNext()) {
@@ -241,6 +246,55 @@ public class StockFinancialData {
 			//date = new Date();
 			//logger.log(Level.INFO,"StockFinancial - ending BWscrape for symbol " + symb + " at " + dateFormat.format(date));
 		}
+
+/*
+ * 		Contact  yCharts for Quarterly EPS growth YoY
+ */
+		
+		int k=0;
+		iter=lSymbols.iterator();
+		try {
+			while (iter.hasNext()) {
+				String symb = iter.next();
+				// Troubleshooting performance in AppEngine
+				//date = new Date();
+				//logger.log(Level.INFO,"StockFinancial - calling scrapeYCharts for symbol " + symb + " at " + dateFormat.format(date));
+				
+				EPSQuarterlyGrowthYoY = scrapeYChartsData("http://ycharts.com/companies/" + symb + "/key_stats");
+				
+				
+				//Troubleshooting performance in AppEngine
+				//date = new Date();
+				//logger.log(Level.INFO,"StockFinancial - ending yCharts for symbol " + symb + " at " + dateFormat.format(date));
+				
+				//Retrieve Stock in bwInfo[] for the symbol under review
+				for(Stock stock : bwInfo) {
+					if (stock.getSymbol().equals(symb)) {
+						scratch = stock;
+						break;
+					}
+				}
+				//If no Stock found, need to allocate one among bwInfo that is not used
+				if (scratch == null) {
+					for (Stock stock : bwInfo) {
+						if (stock.getSymbol() == null) {
+							scratch = stock;
+							scratch.setSymbol(symb);
+							break;
+						}
+					}
+				}
+				
+				// If no bwInfo object available, skip update
+				if (scratch != null) {
+					scratch.setEPSQuarterlyGrowthYoY(EPSQuarterlyGrowthYoY);
+				}
+			}
+		} catch (Exception e) {
+			logger.log(Level.WARNING,"Caught Exception in scrapeYChartsData");
+		}
+
+		
 	    
 		//Make freshly retrieved data persistent in database
 		try {
@@ -261,8 +315,58 @@ public class StockFinancialData {
 			stockInfo.setPercentChange(completeInfo[i].getPercentChange());
 			i++;
 		}
-		
+			
 		return datas;
+	}
+
+	
+	private double scrapeYChartsData(String url) {
+		
+		String sEPSQuarterlyGrowth = "";
+		double EPSQuarterlyGrowth = 0;
+		
+		// Get the page from Ycharts.com
+	    String html = getUrl(url);
+	    if (html.equals("Error connecting to the URL")) {
+	    	return (0);
+	    }
+	    
+	    try {
+		    Document doc = Jsoup.parse(html);
+		    
+		    //Fetch the data when symbol exists
+		    Elements divs= doc.getElementsByClass("box");
+		    outerloop:
+		    for (Element div : divs) {
+		    	if (!div.getElementsContainingText("Income Statement").isEmpty()) {
+		    		Elements rows = div.getElementsByClass("col1");
+		    		for (Element col : rows) {
+		    			if (!col.getElementsContainingText("EPS Diluted (Quarterly YoY Growth)").isEmpty()) {
+		    				Element col2 = col.nextElementSibling();
+		    				if (col2.className().equals("col2")) { 
+		    					sEPSQuarterlyGrowth = col2.text();
+		    					break outerloop;
+		    				}
+		    			}
+		    		}
+
+		    		
+		    	}
+		    }
+
+		    // Check value of EPSQuaterlyGrowth
+		    if (!(sEPSQuarterlyGrowth.matches("[\\-\\.+0-9%]+"))) {
+		    	EPSQuarterlyGrowth = 0;
+		    } else {
+			    sEPSQuarterlyGrowth = normalize(sEPSQuarterlyGrowth);
+			    EPSQuarterlyGrowth = Double.parseDouble(sEPSQuarterlyGrowth);
+		    }
+	    } catch (Exception e) {
+	    	logger.log(Level.WARNING,"Caught exception in srapeYChartsData");
+	    }
+
+
+		return (EPSQuarterlyGrowth);
 	}
 
 	private double scrapeBwData(String url) {
@@ -938,6 +1042,7 @@ public class StockFinancialData {
 				for (Stock bwData: bwInfo) {
 					if (bwData.getSymbol().equals(stock.getSymbol())) {
 						stock.setQuickRatio(bwData.getQuickRatio());
+						stock.setEPSQuarterlyGrowthYoY(bwData.getEPSQuarterlyGrowthYoY());
 						stock.setLastUpdated(new Date());
 						break;
 					}
